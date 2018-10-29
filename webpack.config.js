@@ -7,11 +7,11 @@ module.exports = {
     path: path.resolve(__dirname, 'dist')
   },
   mode: 'development',
-  // externals: {
-  //   'node-fetch': 'fetch',
-  //   'text-encoding': 'TextEncoder',
-  //   'whatwg-url': 'window',
-  //   'isomorphic-fetch': 'fetch',
-  //   '@trust/webcrypto': 'crypto'
-  // }
+  externals: {
+    'node-fetch': 'fetch',
+    'text-encoding': 'TextEncoder',
+    'whatwg-url': 'window',
+    'isomorphic-fetch': 'fetch',
+    '@trust/webcrypto': 'crypto'
+  }
 };
