@@ -12,21 +12,22 @@ $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
 });
 
-function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
+async function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
   dataSync = new DataSync(userDataUrl, oppDataUrl);
 
-  dataSync.createEmptyFileForUser()
-  .then(() => {
-    const game = new Chess();
-    setUpBoard(game);
+  await dataSync.createEmptyFileForUser()
+  const game = new Chess();
+  setUpBoard(game);
 
-    semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId);
+  semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId);
 
-    dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
-  });
+  dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
 }
 
 async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
+  dataSync = new DataSync(userDataUrl);
+
+  await dataSync.createEmptyFileForUser()
   const semanticChessGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
 
   setUpBoard(semanticChessGame.getChessGame(), semanticChessGame);
@@ -139,6 +140,7 @@ auth.trackSession(async session => {
     $('#join-btn').show();
     $('#continue-btn').show();
     $('#data-url').show();
+    $('#data-url2').show();
     $('#opp-url').show();
     $('#opp-webid').show();
 
@@ -148,6 +150,7 @@ auth.trackSession(async session => {
     $('#join-btn').hide();
     $('#continue-btn').hide();
     $('#data-url').hide();
+    $('#data-url2').hide();
     $('#opp-url').hide();
     $('#opp-webid').hide();
   }
@@ -158,6 +161,7 @@ $('#new-btn').click(() => {
   $('#join-btn').hide();
   $('#continue-btn').hide();
   $('#data-url').hide();
+  $('#data-url2').hide();
   $('#opp-url').hide();
   $('#opp-webid').hide();
 
@@ -175,6 +179,7 @@ $('#join-btn').click(() => {
   $('#join-btn').hide();
   $('#continue-btn').hide();
   $('#data-url').hide();
+  $('#data-url2').hide();
   $('#opp-url').hide();
   $('#opp-webid').hide();
 
@@ -185,5 +190,5 @@ $('#join-btn').click(() => {
 
   $('body').append(temp);
 
-  JoinExistingChessGame($('#game-url').val(), userWebId, $('#data-url').val());
+  JoinExistingChessGame($('#game-url').val(), userWebId, $('#data-url2').val());
 });
