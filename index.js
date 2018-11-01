@@ -14,7 +14,7 @@ $('#login-btn').click(() => {
 
 function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
   dataSync = new DataSync(userDataUrl, oppDataUrl);
-  
+
   dataSync.createEmptyFileForUser()
   .then(() => {
     const game = new Chess();
@@ -26,15 +26,13 @@ function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
   });
 }
 
-function JoinExistingChessGame(gameUrl, oppDataUrl, userWebId) {
-  const game = new Chess();
+async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
+  const semanticChessGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
 
-  SemanticChessGame.generateFromUrl(gameUrl, userWebId);
-
-  setUpBoard(game);
+  setUpBoard(semanticChessGame.getChessGame(), semanticChessGame);
 }
 
-function setUpBoard(game) {
+function setUpBoard(game, semanticGame) {
   var board,
     statusEl = $('#status'),
     fenEl = $('#fen'),
@@ -123,7 +121,8 @@ function setUpBoard(game) {
     position: 'start',
     onDragStart: onDragStart,
     onDrop: onDrop,
-    onSnapEnd: onSnapEnd
+    onSnapEnd: onSnapEnd,
+    position: game.fen()
   };
   board = ChessBoard('board', cfg);
 
@@ -186,5 +185,5 @@ $('#join-btn').click(() => {
 
   $('body').append(temp);
 
-  JoinExistingChessGame($('#game-url').val(), $('#opp-url').val(), userWebId);
+  JoinExistingChessGame($('#game-url').val(), userWebId, $('#data-url').val());
 });
