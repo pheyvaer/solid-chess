@@ -44,10 +44,6 @@ async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
 }
 
 function setUpBoard(game, semanticGame) {
-  var statusEl = $('#status'),
-    fenEl = $('#fen'),
-    pgnEl = $('#pgn');
-
   // do not pick up pieces if the game is over
   // only pick up pieces for the side to move
   var onDragStart = function(source, piece, position, orientation) {
@@ -90,39 +86,6 @@ function setUpBoard(game, semanticGame) {
   // for castling, en passant, pawn promotion
   var onSnapEnd = function() {
     board.position(game.fen());
-  };
-
-  var updateStatus = function() {
-    var status = '';
-
-    var moveColor = 'White';
-    if (game.turn() === 'b') {
-      moveColor = 'Black';
-    }
-
-    // checkmate?
-    if (game.in_checkmate() === true) {
-      status = 'Game over, ' + moveColor + ' is in checkmate.';
-    }
-
-    // draw?
-    else if (game.in_draw() === true) {
-      status = 'Game over, drawn position';
-    }
-
-    // game still on
-    else {
-      status = moveColor + ' to move';
-
-      // check?
-      if (game.in_check() === true) {
-        status += ', ' + moveColor + ' is in check';
-      }
-    }
-
-    statusEl.html(status);
-    fenEl.html(game.fen());
-    pgnEl.html(game.pgn());
   };
 
   function storeMoveOnPod(piece, target) {
@@ -220,11 +183,48 @@ $('#join-btn').click(async () => {
   }
 });
 
+function updateStatus() {
+  var statusEl = $('#status'),
+    fenEl = $('#fen'),
+    pgnEl = $('#pgn');
+  var status = '';
+  const game = semanticGame.getChessGame();
+
+  var moveColor = 'White';
+  if (game.turn() === 'b') {
+    moveColor = 'Black';
+  }
+
+  // checkmate?
+  if (game.in_checkmate() === true) {
+    status = 'Game over, ' + moveColor + ' is in checkmate.';
+  }
+
+  // draw?
+  else if (game.in_draw() === true) {
+    status = 'Game over, drawn position';
+  }
+
+  // game still on
+  else {
+    status = moveColor + ' to move';
+
+    // check?
+    if (game.in_check() === true) {
+      status += ', ' + moveColor + ' is in check';
+    }
+  }
+
+  statusEl.html(status);
+  fenEl.html(game.fen());
+  pgnEl.html(game.pgn());
+};
+
 $('#refresh-btn').click(refresh);
 
 async function refresh() {
   console.log('refresh started');
-  
+
   if (semanticGame.isOpponentsTurn()) {
     const updates = await dataSync.checkUserInboxForUpdates();
 
@@ -243,6 +243,7 @@ async function refresh() {
         const san = await Utils.getSAN(nextMoveUrl);
         semanticGame.addMove(san, nextMoveUrl);
         board.position(semanticGame.getChessGame().fen());
+        updateStatus();
       }
     });
   }
