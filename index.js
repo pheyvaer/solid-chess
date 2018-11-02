@@ -3,39 +3,44 @@ const Chess = require('chess.js');
 const SemanticChessGame = require('./lib/semanticchess');
 const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
+const Utils = require('./lib/utils');
+const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
 
 let userWebId;
 let semanticGame;
 let dataSync;
+let board;
 
 $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
 });
 
 async function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
-  dataSync = new DataSync(userDataUrl, oppDataUrl);
+  const userInboxUrl = await Utils.getInboxUrl(userWebId);
+  const opponentInboxUrl = await Utils.getInboxUrl(oppWebId);
+  dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
+  await dataSync.createEmptyFileForUser();
 
-  await dataSync.createEmptyFileForUser()
   const game = new Chess();
-  setUpBoard(game);
-
-  semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId);
-
+  semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId, 'white', game);
   dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
+
+  setUpBoard(game, semanticGame);
 }
 
 async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
-  dataSync = new DataSync(userDataUrl);
+  const userInboxUrl = await Utils.getInboxUrl(userWebId);
+  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  const opponentInboxUrl = await Utils.getInboxUrl(semanticGame.getOpponentWebId());
+  dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
 
-  await dataSync.createEmptyFileForUser()
-  const semanticChessGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  await dataSync.createEmptyFileForUser();
 
-  setUpBoard(semanticChessGame.getChessGame(), semanticChessGame);
+  setUpBoard(semanticGame.getChessGame(), semanticGame);
 }
 
 function setUpBoard(game, semanticGame) {
-  var board,
-    statusEl = $('#status'),
+  var statusEl = $('#status'),
     fenEl = $('#fen'),
     pgnEl = $('#pgn');
 
@@ -66,9 +71,13 @@ function setUpBoard(game, semanticGame) {
     // illegal move
     if (move === null) return 'snapback';
 
-    let sparqlQuery = semanticGame.addMove(move.san);
+    let result = semanticGame.addMove(move.san);
 
-    dataSync.executeSPARQLUpdateForUser(sparqlQuery);
+    dataSync.executeSPARQLUpdateForUser(result.sparqlUpdate);
+
+    if (result.notification) {
+      dataSync.sendToOpponentsInbox(result.notification);
+    }
 
     updateStatus();
   };
@@ -123,8 +132,10 @@ function setUpBoard(game, semanticGame) {
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
-    position: game.fen()
+    position: game.fen(),
+    orientation: semanticGame.getUserColor()
   };
+
   board = ChessBoard('board', cfg);
 
   updateStatus();
@@ -191,4 +202,27 @@ $('#join-btn').click(() => {
   $('body').append(temp);
 
   JoinExistingChessGame($('#game-url').val(), userWebId, $('#data-url2').val());
+});
+
+$('#refresh-btn').click(async () => {
+  if (semanticGame.isOpponentsTurn()) {
+    const updates = await dataSync.checkUserInboxForUpdates();
+
+    updates.forEach(async (fileurl) => {
+      const lastMoveUrl = semanticGame.getLastMove().url;
+      const nextMoveUrl = await Utils.getNextHalfMove(fileurl, lastMoveUrl);
+
+      if (nextMoveUrl) {
+        console.log(nextMoveUrl);
+
+        dataSync.executeSPARQLUpdateForUser(`INSERT DATA {
+          <${lastMoveUrl}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
+        }`);
+
+        const san = await Utils.getSAN(nextMoveUrl);
+        semanticGame.addMove(san, nextMoveUrl);
+        board.position(semanticGame.getChessGame().fen());
+      }
+    });
+  }
 });
