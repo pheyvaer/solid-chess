@@ -18,19 +18,33 @@ $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
 });
 
-async function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
+function setUpForEveryGameOption() {
+  $('#game').removeClass('hidden');
+}
+
+function setUpAfterEveryGameOptionIsSetUp() {
+  // refresh every 5sec
+  setInterval(refresh, 5000);
+}
+
+async function setUpNewChessGame(userDataUrl, userWebId, oppWebId) {
+
+  setUpForEveryGameOption();
   const userInboxUrl = await Utils.getInboxUrl(userWebId);
   const opponentInboxUrl = await Utils.getInboxUrl(oppWebId);
   dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
   await dataSync.createEmptyFileForUser();
 
   const game = new Chess();
-  semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId, 'white', game);
+  const gameUrl = Utils.getGameUrl(userDataUrl);
+  semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game);
+
   dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
-  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>`);
+  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
   dataSync.sendToOpponentsInbox(`<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(game, semanticGame);
+  setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
@@ -46,6 +60,7 @@ async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
   }`);
 
   setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function ContinueExistingChessGame(gameUrl, userWebId) {
@@ -98,11 +113,6 @@ function setUpBoard(game, semanticGame) {
     board.position(game.fen());
   };
 
-  function storeMoveOnPod(piece, target) {
-    console.log(piece);
-    console.log(`at ${target}`);
-  }
-
   var cfg = {
     draggable: true,
     position: 'start',
@@ -133,6 +143,8 @@ auth.trackSession(async session => {
     $('#opp-webid').show();
 
     userWebId = session.webId;
+    $('#user-name').removeClass('hidden');
+    $('#user-name').text('We have a user!');
   } else {
     $('#new-btn').hide();
     $('#join-btn').hide();
@@ -144,39 +156,38 @@ auth.trackSession(async session => {
   }
 });
 
-$('#new-btn').click(() => {
-  $('#new-btn').hide();
-  $('#join-btn').hide();
-  $('#continue-btn').hide();
-  $('#data-url').hide();
+function afterGameOption() {
   $('#data-url2').hide();
   $('#opp-url').hide();
-  $('#opp-webid').hide();
+  // $('#opp-webid').hide();
+  $('#game-options').addClass('hidden');
+  //$('#game').removeClass('hidden');
 
   const temp = $('<div id="board" style="width: 400px"></div>\n' +
-  '<p>Status: <span id="status"></span></p>\n' +
-  '<p>FEN: <span id="fen"></span></p>\n' +
-  '<p>PGN: <span id="pgn"></span></p>');
+  '<p>Status: <span id="status"></span></p>');
+  $('#game').append(temp);
+}
 
-  $('body').append(temp);
-  setUpNewChessGame($('#data-url').val(), $('#opp-url').val(), userWebId, $('#opp-webid').val());
+$('#new-btn').click(() => {
+  afterGameOption();
+  $('#new-game-options').removeClass('hidden');
+  $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
+  //setUpNewChessGame($('#data-url').val(), $('#opp-url').val(), userWebId, $('#opp-webid').val());
+});
+
+$('#start-new-game-btn').click(() => {
+  $('#new-game-options').addClass('hidden');
+
+  if ($('#data-url').val() !== userWebId) {
+    setUpNewChessGame($('#data-url').val(), userWebId, $('#opp-webid').val());
+  } else {
+    console.warn('We are pretty sure you do not want remove your WebID.');
+  }
 });
 
 $('#join-btn').click(async () => {
-  $('#new-btn').hide();
-  $('#join-btn').hide();
-  $('#continue-btn').hide();
-  $('#data-url').hide();
-  $('#data-url2').hide();
-  $('#opp-url').hide();
-  $('#opp-webid').hide();
-
-  const temp = $('<div id="board" style="width: 400px"></div>\n' +
-  '<p>Status: <span id="status"></span></p>\n' +
-  '<p>FEN: <span id="fen"></span></p>\n' +
-  '<p>PGN: <span id="pgn"></span></p>');
-
-  $('body').append(temp);
+  afterGameOption();
+  $('#join-game-options').removeClass('hidden');
 
   if (!dataSync) {
     const userInboxUrl = await Utils.getInboxUrl(userWebId);
@@ -184,30 +195,29 @@ $('#join-btn').click(async () => {
   }
 
   const games = await findGamesToJoin();
+  $('#join-looking').addClass('hidden');
 
   if (games.length > 0) {
-    JoinExistingChessGame(games[0].gameUrl, userWebId, $('#data-url2').val());
-    dataSync.deleteFileForUser(games[0].fileUrl);
+    $('#join-form').removeClass('hidden');
+    const $select = $('#game-urls');
+
+    games.forEach(game => {
+      $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
+    });
   } else {
-    console.log('No games to join were found.');
+    $('#no-join').removeClass('hidden');
   }
+
+  // if (games.length > 0) {
+  //   JoinExistingChessGame(games[0].gameUrl, userWebId, $('#data-url2').val());
+  //   dataSync.deleteFileForUser(games[0].fileUrl);
+  // } else {
+  //   console.log('No games to join were found.');
+  // }
 });
 
 $('#continue-btn').click(async () => {
-  $('#new-btn').hide();
-  $('#join-btn').hide();
-  $('#continue-btn').hide();
-  $('#data-url').hide();
-  $('#data-url2').hide();
-  $('#opp-url').hide();
-  $('#opp-webid').hide();
-
-  const temp = $('<div id="board" style="width: 400px"></div>\n' +
-  '<p>Status: <span id="status"></span></p>\n' +
-  '<p>FEN: <span id="fen"></span></p>\n' +
-  '<p>PGN: <span id="pgn"></span></p>');
-
-  $('body').append(temp);
+  afterGameOption();
 
   if (!dataSync) {
     const userInboxUrl = await Utils.getInboxUrl(userWebId);
@@ -225,9 +235,7 @@ $('#continue-btn').click(async () => {
 });
 
 function updateStatus() {
-  var statusEl = $('#status'),
-    fenEl = $('#fen'),
-    pgnEl = $('#pgn');
+  var statusEl = $('#status');
   var status = '';
   const game = semanticGame.getChessGame();
 
@@ -257,8 +265,6 @@ function updateStatus() {
   }
 
   statusEl.html(status);
-  fenEl.html(game.fen());
-  pgnEl.html(game.pgn());
 };
 
 $('#refresh-btn').click(refresh);
@@ -315,7 +321,3 @@ async function findGamesToJoin() {
 
   return deferred.promise;
 }
-
-// refresh every 5sec
-// TODO: only do this once the game is set up
-setInterval(refresh, 5000);

@@ -4,19 +4,19 @@
     <meta charset="utf-8">
     <title>Solid Chess</title>
 
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.2/css/all.css" integrity="sha384-/rXc/GQVaYpyDdyxK+ecHPVYJSN9bmVFBvjA/9eOB+pb3F2w2N6fc5qB9Ew5yIns" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <link rel="stylesheet" href="css/chessboard-0.3.0.min.css">
+    <link rel="stylesheet" href="css/main.css">
   </head>
   <body>
-    <input id="login-btn" type="button" value="Log in"></input>
-    <input id="new-btn" type="button" value="Start new game"></input>
-    <input id="join-btn" type="button" value="Join game"></input>
-    <input id="continue-btn" type="button" value="Continue game"></input>
-    <input id="data-url" type="text" value="https://ph_test.solid.community/public/chess.ttl"></input>
+    <!-- <input id="login-btn" type="button" value="Log in"></input> -->
+    <!-- <input id="data-url" type="text" value="https://ph_test.solid.community/public/chess.ttl"></input>
     <input id="data-url2" type="text" value="https://ph2.solid.community/public/chess.ttl"></input>
     <input id="opp-url" type="text" value="https://ph2.solid.community/public/chess.ttl"></input>
     <input id="opp-webid" type="text" value="https://ph2.solid.community/profile/card#me"></input>
-    <input id="game-url" type="text" value="https://ph_test.solid.community/public/chess.ttl#game"></input>
-    <input id="refresh-btn" type="button" value="Refresh"></input>
+    <input id="game-url" type="text" value="https://ph_test.solid.community/public/chess.ttl#game"></input> -->
+    <!-- <input id="refresh-btn" type="button" value="Refresh"></input> -->
 
     <!-- <br />
     <br /> -->
@@ -26,11 +26,72 @@
     <p>FEN: <span id="fen"></span></p>
     <p>PGN: <span id="pgn"></span></p> -->
 
+    <div class="container">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <span class="navbar-brand"><i class="fas fa-chess"></i>&nbsp;&nbsp;Solid Chess</span>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+
+          </ul>
+          <button id="login-btn" class="hidden btn btn-outline-success my-2 my-sm-0" type="button">Log in</button>
+          <button id="logout-btn" class="hidden btn btn-outline-success my-2 my-sm-0" type="button">Log out</button>
+          <span id='user-name' class="hidden"></span>
+        </div>
+      </nav>
+
+      <div class="row justify-content-center align-items-center">
+        <div id="game-options" class="col-6">
+          <div class="btn-group" role="group">
+            <button id="new-btn" type="button" class="btn btn-secondary">New game</button>
+            <button id="join-btn" type="button" class="btn btn-secondary">Join game</button>
+            <button id="continue-btn" type="button" class="btn btn-secondary">Continue game</button>
+          </div>
+        </div>
+
+        <div id="new-game-options" class="col-6 hidden">
+          <form>
+            <div class="form-group">
+              <label for="opp-webid">Please provide the WebID of your opponent</label>
+              <input type="text" class="form-control" id="opp-webid" aria-describedby="pathHelp" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me">
+            </div>
+            <div class="form-group">
+              <label for="data-url">Please provide path on your POD to store the game</label>
+              <input type="text" class="form-control" id="data-url" aria-describedby="pathHelp" placeholder="Enter path">
+              <small id="pathHelp" class="form-text text-muted">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if exits!</small>
+            </div>
+            <button id="start-new-game-btn" type="button" class="btn btn-primary">Start!</button>
+          </form>
+        </div>
+
+        <div id="join-game-options" class="col-6 hidden">
+          <span id="join-looking">Looking for games to join...</span>
+          <span id="no-join" class="hidden">No games to join were found.</span>
+          <form id="join-form" class="hidden">
+            <div class="form-group">
+              <label for="opp-webid">Select the game you want to join</label>
+              <select id="game-urls"></select>
+            </div>
+            <div class="form-group">
+              <label for="join-data-url">Please provide path on your POD to store the game</label>
+              <input type="text" class="form-control" id="join-data-url" aria-describedby="pathHelp" placeholder="Enter path">
+              <small id="pathHelp" class="form-text text-muted">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if exits!</small>
+            </div>
+            <button id="join-game-btn" type="button" class="btn btn-primary">Join!</button>
+          </form>
+        </div>
+
+        <div id="game" class="col-6 hidden" ></div>
+      </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/json3/3.3.2/json3.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <!-- <script src="./js/chessboard.js"></script> -->
-    <!-- <script src="./node_modules/chess.js/chess.js"></script> -->
-    <!-- <script src="./index.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
     <script src="./dist/main.js"></script>
   </body>
 </html>
