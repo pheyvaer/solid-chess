@@ -5,6 +5,8 @@ const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
 const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
+const joinGameRequest = 'http://example.org/game/asksToJoin';
+const Q = require('q');
 
 let userWebId;
 let semanticGame;
@@ -24,6 +26,7 @@ async function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
   const game = new Chess();
   semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId, 'white', game);
   dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
+  dataSync.sendToOpponentsInbox(`<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(game, semanticGame);
 }
@@ -35,6 +38,7 @@ async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
   dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
 
   await dataSync.createEmptyFileForUser();
+  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> a <${chessOnto}ChessGame>}`);
 
   setUpBoard(semanticGame.getChessGame(), semanticGame);
 }
@@ -185,7 +189,7 @@ $('#new-btn').click(() => {
   setUpNewChessGame($('#data-url').val(), $('#opp-url').val(), userWebId, $('#opp-webid').val());
 });
 
-$('#join-btn').click(() => {
+$('#join-btn').click(async () => {
   $('#new-btn').hide();
   $('#join-btn').hide();
   $('#continue-btn').hide();
@@ -201,10 +205,26 @@ $('#join-btn').click(() => {
 
   $('body').append(temp);
 
-  JoinExistingChessGame($('#game-url').val(), userWebId, $('#data-url2').val());
+  if (!dataSync) {
+    const userInboxUrl = await Utils.getInboxUrl(userWebId);
+    dataSync = new DataSync($('#data-url').val(), userInboxUrl);
+  }
+
+  const games = await findGamesToJoin();
+
+  if (games.length > 0) {
+    JoinExistingChessGame(games[0].gameUrl, userWebId, $('#data-url2').val());
+    dataSync.deleteFileForUser(games[0].fileUrl);
+  } else {
+    console.log('No games to join were found.');
+  }
 });
 
-$('#refresh-btn').click(async () => {
+$('#refresh-btn').click(refresh);
+
+async function refresh() {
+  console.log('refresh started');
+  
   if (semanticGame.isOpponentsTurn()) {
     const updates = await dataSync.checkUserInboxForUpdates();
 
@@ -214,6 +234,7 @@ $('#refresh-btn').click(async () => {
 
       if (nextMoveUrl) {
         console.log(nextMoveUrl);
+        dataSync.deleteFileForUser(fileurl);
 
         dataSync.executeSPARQLUpdateForUser(`INSERT DATA {
           <${lastMoveUrl}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
@@ -225,4 +246,33 @@ $('#refresh-btn').click(async () => {
       }
     });
   }
-});
+}
+
+async function findGamesToJoin() {
+  const deferred = Q.defer();
+  const promises = [];
+  const updates = await dataSync.checkUserInboxForUpdates();
+  const results = [];
+
+  updates.forEach(async (fileurl) => {
+    const d = Q.defer();
+    promises.push(d.promise);
+    const result = await Utils.getJoinRequest(fileurl);
+
+    if (result) {
+      result.fileUrl = fileurl;
+      results.push(result);
+    }
+
+    d.resolve();
+  });
+
+  Q.all(promises).then(() => {
+    deferred.resolve(results);
+  });
+
+  return deferred.promise;
+}
+
+// refresh every 5sec
+setInterval(refresh, 5000);
