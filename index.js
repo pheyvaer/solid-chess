@@ -6,6 +6,7 @@ const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
 const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
 const joinGameRequest = 'http://example.org/game/asksToJoin';
+const storeIn = 'http://example.org/storage/storeIn';
 const Q = require('q');
 
 let userWebId;
@@ -26,6 +27,7 @@ async function setUpNewChessGame(userDataUrl, oppDataUrl, userWebId, oppWebId) {
   const game = new Chess();
   semanticGame = new SemanticChessGame(userDataUrl + '#game', userDataUrl, userWebId, oppWebId, 'white', game);
   dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
+  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>`);
   dataSync.sendToOpponentsInbox(`<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(game, semanticGame);
@@ -38,9 +40,17 @@ async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
   dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
 
   await dataSync.createEmptyFileForUser();
-  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> a <${chessOnto}ChessGame>}`);
+  dataSync.executeSPARQLUpdateForUser(`INSERT DATA {
+    <${gameUrl}> a <${chessOnto}ChessGame>;
+      <${storeIn}> <${userDataUrl}>.
+  }`);
 
   setUpBoard(semanticGame.getChessGame(), semanticGame);
+}
+
+async function ContinueExistingChessGame(gameUrl, userWebId) {
+  const userInboxUrl = await Utils.getInboxUrl(userWebId);
+  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
 }
 
 function setUpBoard(game, semanticGame) {
@@ -183,6 +193,37 @@ $('#join-btn').click(async () => {
   }
 });
 
+$('#continue-btn').click(async () => {
+  $('#new-btn').hide();
+  $('#join-btn').hide();
+  $('#continue-btn').hide();
+  $('#data-url').hide();
+  $('#data-url2').hide();
+  $('#opp-url').hide();
+  $('#opp-webid').hide();
+
+  const temp = $('<div id="board" style="width: 400px"></div>\n' +
+  '<p>Status: <span id="status"></span></p>\n' +
+  '<p>FEN: <span id="fen"></span></p>\n' +
+  '<p>PGN: <span id="pgn"></span></p>');
+
+  $('body').append(temp);
+
+  if (!dataSync) {
+    const userInboxUrl = await Utils.getInboxUrl(userWebId);
+    dataSync = new DataSync($('#data-url').val(), userInboxUrl);
+  }
+
+  const gameUrls = await Utils.getGamesToContinue(userWebId);
+
+  if (gameUrls.length > 0) {
+    const gameUrl = gameUrls[0];
+    ContinueExistingChessGame(gameUrl, userWebId);
+  } else {
+    console.log('No games to continue were found.');
+  }
+});
+
 function updateStatus() {
   var statusEl = $('#status'),
     fenEl = $('#fen'),
@@ -276,4 +317,5 @@ async function findGamesToJoin() {
 }
 
 // refresh every 5sec
+// TODO: only do this once the game is set up
 setInterval(refresh, 5000);
