@@ -7,18 +7,39 @@ const Utils = require('./lib/utils');
 const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
 const joinGameRequest = 'http://example.org/game/asksToJoin';
 const storeIn = 'http://example.org/storage/storeIn';
+const participatesIn = 'http://example.org/game/participatesIn';
 const Q = require('q');
 
 let userWebId;
 let semanticGame;
-let dataSync;
+let dataSync = new DataSync();
 let board;
+let userDataUrl;
+let userInboxUrl;
+let opponentInboxUrl;
+let oppWebId;
 
 $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
 });
 
-function setUpForEveryGameOption() {
+async function getUserInboxUrl() {
+  if (!userInboxUrl) {
+    userInboxUrl = await Utils.getInboxUrl(userWebId);
+  }
+
+  return userInboxUrl;
+}
+
+async function getOpponentInboxUrl() {
+  if (!opponentInboxUrl) {
+    opponentInboxUrl = await Utils.getInboxUrl(oppWebId);
+  }
+
+  return opponentInboxUrl;
+}
+
+async function setUpForEveryGameOption() {
   $('#game').removeClass('hidden');
 }
 
@@ -27,44 +48,41 @@ function setUpAfterEveryGameOptionIsSetUp() {
   setInterval(refresh, 5000);
 }
 
-async function setUpNewChessGame(userDataUrl, userWebId, oppWebId) {
-
+async function setUpNewChessGame() {
   setUpForEveryGameOption();
-  const userInboxUrl = await Utils.getInboxUrl(userWebId);
-  const opponentInboxUrl = await Utils.getInboxUrl(oppWebId);
-  dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
-  await dataSync.createEmptyFileForUser();
+  await dataSync.createEmptyFileForUser(userDataUrl);
 
   const game = new Chess();
   const gameUrl = Utils.getGameUrl(userDataUrl);
   semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game);
 
-  dataSync.executeSPARQLUpdateForUser(`INSERT DATA {${semanticGame.getGameRDF()}}`);
-  dataSync.executeSPARQLUpdateForUser(`INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
-  dataSync.sendToOpponentsInbox(`<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()}}`);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(game, semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function JoinExistingChessGame(gameUrl, userWebId, userDataUrl) {
-  const userInboxUrl = await Utils.getInboxUrl(userWebId);
+async function JoinExistingChessGame(gameUrl) {
+  setUpForEveryGameOption();
   semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
-  const opponentInboxUrl = await Utils.getInboxUrl(semanticGame.getOpponentWebId());
-  dataSync = new DataSync(userDataUrl, userInboxUrl, opponentInboxUrl);
+  oppWebId = semanticGame.getOpponentWebId();
 
-  await dataSync.createEmptyFileForUser();
-  dataSync.executeSPARQLUpdateForUser(`INSERT DATA {
+  await dataSync.createEmptyFileForUser(userDataUrl);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
     <${gameUrl}> a <${chessOnto}ChessGame>;
       <${storeIn}> <${userDataUrl}>.
   }`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
 
   setUpBoard(semanticGame.getChessGame(), semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function ContinueExistingChessGame(gameUrl, userWebId) {
-  const userInboxUrl = await Utils.getInboxUrl(userWebId);
+async function ContinueExistingChessGame(gameUrl) {
+  const userInboxUrl = await getUserInboxUrl();
   semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
 }
 
@@ -85,7 +103,7 @@ function setUpBoard(game, semanticGame) {
     }
   };
 
-  var onDrop = function(source, target) {
+  var onDrop = async function(source, target) {
     // see if the move is legal
     var move = game.move({
       from: source,
@@ -98,10 +116,10 @@ function setUpBoard(game, semanticGame) {
 
     let result = semanticGame.addMove(move.san);
 
-    dataSync.executeSPARQLUpdateForUser(result.sparqlUpdate);
+    dataSync.executeSPARQLUpdateForUser(userDataUrl, result.sparqlUpdate);
 
     if (result.notification) {
-      dataSync.sendToOpponentsInbox(result.notification);
+      dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), result.notification);
     }
 
     updateStatus();
@@ -179,7 +197,9 @@ $('#start-new-game-btn').click(() => {
   $('#new-game-options').addClass('hidden');
 
   if ($('#data-url').val() !== userWebId) {
-    setUpNewChessGame($('#data-url').val(), userWebId, $('#opp-webid').val());
+    oppWebId = $('#opp-webid').val();
+    userDataUrl = $('#data-url').val();
+    setUpNewChessGame();
   } else {
     console.warn('We are pretty sure you do not want remove your WebID.');
   }
@@ -188,11 +208,7 @@ $('#start-new-game-btn').click(() => {
 $('#join-btn').click(async () => {
   afterGameOption();
   $('#join-game-options').removeClass('hidden');
-
-  if (!dataSync) {
-    const userInboxUrl = await Utils.getInboxUrl(userWebId);
-    dataSync = new DataSync($('#data-url').val(), userInboxUrl);
-  }
+  $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
 
   const games = await findGamesToJoin();
   $('#join-looking').addClass('hidden');
@@ -207,30 +223,35 @@ $('#join-btn').click(async () => {
   } else {
     $('#no-join').removeClass('hidden');
   }
+});
 
-  // if (games.length > 0) {
-  //   JoinExistingChessGame(games[0].gameUrl, userWebId, $('#data-url2').val());
-  //   dataSync.deleteFileForUser(games[0].fileUrl);
-  // } else {
-  //   console.log('No games to join were found.');
-  // }
+$('#join-game-btn').click(() => {
+  $('#join-game-options').addClass('hidden');
+
+  if ($('#join-data-url').val() !== userWebId) {
+    userDataUrl = $('#join-data-url').val();
+    JoinExistingChessGame($('#game-urls').val());
+  } else {
+    console.warn('We are pretty sure you do not want remove your WebID.');
+  }
 });
 
 $('#continue-btn').click(async () => {
   afterGameOption();
+  $('#continue-game-options').removeClass('hidden');
 
-  if (!dataSync) {
-    const userInboxUrl = await Utils.getInboxUrl(userWebId);
-    dataSync = new DataSync($('#data-url').val(), userInboxUrl);
-  }
+  const games = await Utils.getGamesToContinue(userWebId);
+  $('#continue-looking').addClass('hidden');
 
-  const gameUrls = await Utils.getGamesToContinue(userWebId);
+  if (games.length > 0) {
+    $('#continue-form').removeClass('hidden');
+    const $select = $('#continue-game-urls');
 
-  if (gameUrls.length > 0) {
-    const gameUrl = gameUrls[0];
-    ContinueExistingChessGame(gameUrl, userWebId);
+    games.forEach(game => {
+      $select.append($(`<option value="${game}">${game}</option>`));
+    });
   } else {
-    console.log('No games to continue were found.');
+    $('#no-join').removeClass('hidden');
   }
 });
 
@@ -273,7 +294,7 @@ async function refresh() {
   console.log('refresh started');
 
   if (semanticGame.isOpponentsTurn()) {
-    const updates = await dataSync.checkUserInboxForUpdates();
+    const updates = await dataSync.checkUserInboxForUpdates(await getUserInboxUrl());
 
     updates.forEach(async (fileurl) => {
       const lastMoveUrl = semanticGame.getLastMove().url;
@@ -283,7 +304,7 @@ async function refresh() {
         console.log(nextMoveUrl);
         dataSync.deleteFileForUser(fileurl);
 
-        dataSync.executeSPARQLUpdateForUser(`INSERT DATA {
+        dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
           <${lastMoveUrl}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
         }`);
 
@@ -299,7 +320,7 @@ async function refresh() {
 async function findGamesToJoin() {
   const deferred = Q.defer();
   const promises = [];
-  const updates = await dataSync.checkUserInboxForUpdates();
+  const updates = await dataSync.checkUserInboxForUpdates(await getUserInboxUrl());
   const results = [];
 
   updates.forEach(async (fileurl) => {

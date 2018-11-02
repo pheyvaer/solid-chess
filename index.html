@@ -84,6 +84,18 @@
           </form>
         </div>
 
+        <div id="continue-game-options" class="col-6 hidden">
+          <span id="continue-looking">Looking for games to continue...</span>
+          <span id="no-continue" class="hidden">No games to join were found.</span>
+          <form id="continue-form" class="hidden">
+            <div class="form-group">
+              <label for="opp-webid">Select the game you want to continue</label>
+              <select id="continue-game-urls"></select>
+            </div>
+            <button id="join-game-btn" type="button" class="btn btn-primary">Continue!</button>
+          </form>
+        </div>
+
         <div id="game" class="col-6 hidden" ></div>
       </div>
     </div>
