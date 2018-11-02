@@ -82,8 +82,12 @@ async function JoinExistingChessGame(gameUrl) {
 }
 
 async function ContinueExistingChessGame(gameUrl) {
-  const userInboxUrl = await getUserInboxUrl();
+  setUpForEveryGameOption();
   semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  oppWebId = semanticGame.getOpponentWebId();
+
+  setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpAfterEveryGameOptionIsSetUp();
 }
 
 function setUpBoard(game, semanticGame) {
@@ -248,11 +252,26 @@ $('#continue-btn').click(async () => {
     const $select = $('#continue-game-urls');
 
     games.forEach(game => {
-      $select.append($(`<option value="${game}">${game}</option>`));
+      $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
     });
   } else {
     $('#no-join').removeClass('hidden');
   }
+});
+
+$('#continue-game-btn').click(async () => {
+  $('#continue-game-options').addClass('hidden');
+  const games = await Utils.getGamesToContinue(userWebId);
+  const selectedGame = $('#continue-game-urls').val();
+  let i = 0;
+
+  while (i < games.length && games[i].gameUrl !== selectedGame) {
+    i ++;
+  }
+
+  userDataUrl = games[i].storeUrl;
+
+  ContinueExistingChessGame(selectedGame);
 });
 
 function updateStatus() {
@@ -342,3 +361,11 @@ async function findGamesToJoin() {
 
   return deferred.promise;
 }
+
+$('#clear-inbox-btn').click(async () => {
+  const resources = await dataSync.getAllResourcesInInbox(await getUserInboxUrl());
+
+  resources.forEach(r => {
+    dataSync.deleteFileForUser(r);
+  });
+});
