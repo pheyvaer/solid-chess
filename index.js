@@ -98,7 +98,7 @@ async function ContinueExistingChessGame(gameUrl) {
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-function setUpBoard(game, semanticGame) {
+async function setUpBoard(game, semanticGame) {
   // do not pick up pieces if the game is over
   // only pick up pieces for the side to move
   var onDragStart = function(source, piece, position, orientation) {
@@ -154,6 +154,13 @@ function setUpBoard(game, semanticGame) {
   };
 
   board = ChessBoard('board', cfg);
+  const oppName = await getFormattedName(oppWebId);
+
+  if (oppName) {
+    $('#opponent-name').text(oppName);
+  } else {
+    $('#opponent-name').text(oppWebId);
+  }
 
   updateStatus();
 }
@@ -164,33 +171,13 @@ auth.trackSession(async session => {
 
   if (loggedIn) {
     $('#user-menu').removeClass('hidden');
-    // $('#login-btn').hide();
-    // $('#new-btn').show();
-    // $('#join-btn').show();
-    // $('#continue-btn').show();
-    // $('#data-url').show();
-    // $('#data-url2').show();
-    // $('#opp-url').show();
-    // $('#opp-webid').show();
 
     userWebId = session.webId;
-    const names = await Utils.getName(userWebId);
+    const name = await getFormattedName(userWebId);
 
-    if (names) {
+    if (name) {
       $('#user-name').removeClass('hidden');
-      if (names.fullname) {
-        $('#user-name').text(names.fullname);
-      } else {
-        let n = '';
-
-        if (names.firstname) {
-          n += names.firstname;
-        }
-
-        if (names.lastname) {
-          n += names.lastname;
-        }
-      }
+      $('#user-name').text(name);
     }
   } else {
     $('#login-btn').removeClass('hidden');
@@ -203,8 +190,11 @@ function afterGameOption() {
 }
 
 function afterGameSpecificOptions() {
-  const temp = $('<div id="board" style="width: 400px"></div>\n' +
-  '<p>Status: <span id="status"></span></p>');
+  const temp = $(`<div id="board" style="width: 400px"></div>\n
+  <div id="game-details">
+    <p>Status: <span id="status"></span></p>
+    <p>Opponent: <span id="opponent-name"></span></p>
+  </div>`);
   $('#game').append(temp);
 }
 
@@ -212,7 +202,6 @@ $('#new-btn').click(() => {
   afterGameOption();
   $('#new-game-options').removeClass('hidden');
   $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
-  //setUpNewChessGame($('#data-url').val(), $('#opp-url').val(), userWebId, $('#opp-webid').val());
 });
 
 $('#start-new-game-btn').click(() => {
@@ -432,4 +421,25 @@ function getNewGamePosition() {
   } else {
     return null;
   }
+}
+
+async function getFormattedName(webid) {
+  const names = await Utils.getName(webid);
+  let n = null;
+
+  if (names) {
+    if (names.fullname) {
+      n = names.fullname;
+    } else {
+      if (names.firstname) {
+        n += names.firstname;
+      }
+
+      if (names.lastname) {
+        n += names.lastname;
+      }
+    }
+  }
+
+  return n;
 }

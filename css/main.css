@@ -23,6 +23,10 @@ body {
   margin-bottom: 15px;
 }
 
+#game-details {
+  margin-top: 20px;
+}
+
 .hidden {
   display: none!important;
 }
