@@ -1,3 +1,28 @@
+body {
+  background-image: url("../img/chess-background.jpg");
+  background-repeat: no-repeat;
+  background-size: auto;
+  color: white;
+}
+
+#content {
+  margin-top: 50px;
+}
+
+#user-name {
+  color: white;
+  padding-left: 5px;
+}
+
+#how-it-works {
+  margin-top: 50px;
+  color: white;
+}
+
+#custom-position-chk-group {
+  margin-bottom: 15px;
+}
+
 .hidden {
   display: none!important;
 }

@@ -155,6 +155,7 @@ auth.trackSession(async session => {
   console.log(`logged in: ${loggedIn}`);
 
   if (loggedIn) {
+    $('#user-menu').removeClass('hidden');
     $('#login-btn').hide();
     $('#new-btn').show();
     $('#join-btn').show();
@@ -165,25 +166,34 @@ auth.trackSession(async session => {
     $('#opp-webid').show();
 
     userWebId = session.webId;
-    $('#user-name').removeClass('hidden');
-    $('#user-name').text('We have a user!');
+    const names = await Utils.getName(userWebId);
+
+    if (names) {
+      $('#user-name').removeClass('hidden');
+      if (names.fullname) {
+        $('#user-name').text(names.fullname);
+      } else {
+        let n = '';
+
+        if (names.firstname) {
+          n += names.firstname;
+        }
+
+        if (names.lastname) {
+          n += names.lastname;
+        }
+      }
+    }
   } else {
-    $('#new-btn').hide();
-    $('#join-btn').hide();
-    $('#continue-btn').hide();
-    $('#data-url').hide();
-    $('#data-url2').hide();
-    $('#opp-url').hide();
-    $('#opp-webid').hide();
+    $('#login-btn').removeClass('hidden');
   }
 });
 
 function afterGameOption() {
   $('#data-url2').hide();
   $('#opp-url').hide();
-  // $('#opp-webid').hide();
   $('#game-options').addClass('hidden');
-  //$('#game').removeClass('hidden');
+  $('#how-it-works').addClass('hidden');
 
   const temp = $('<div id="board" style="width: 400px"></div>\n' +
   '<p>Status: <span id="status"></span></p>');
@@ -368,4 +378,12 @@ $('#clear-inbox-btn').click(async () => {
   resources.forEach(r => {
     dataSync.deleteFileForUser(r);
   });
+});
+
+$('#custom-position-chk').change(() => {
+  if ($('#custom-position-chk').prop('checked')) {
+    $('#custom-position').removeClass('hidden');
+  } else {
+    $('#custom-position').addClass('hidden');
+  }
 });

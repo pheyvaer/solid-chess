@@ -2,6 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
     <title>Solid Chess</title>
 
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.2/css/all.css" integrity="sha384-/rXc/GQVaYpyDdyxK+ecHPVYJSN9bmVFBvjA/9eOB+pb3F2w2N6fc5qB9Ew5yIns" crossorigin="anonymous">
@@ -27,43 +29,55 @@
     <p>PGN: <span id="pgn"></span></p> -->
 
     <div class="container">
-      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <span class="navbar-brand"><i class="fas fa-chess"></i>&nbsp;&nbsp;Solid Chess</span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav mr-auto">
-            <button id="clear-inbox-btn" class=" btn btn-outline-danger my-2 my-sm-0" type="button">Clear inbox</button>
+        <div class="navbar-collapse collapse w-100 order-3 dual-collapse2" id="navbarSupportedContent">
+          <ul class="navbar-nav ml-auto">
+            <li><button id="login-btn" class="hidden btn btn-dark my-2 my-sm-0" type="button">Log in</button></li>
+            <li id="user-menu" class="hidden nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-user"><span id='user-name' class="hidden"></span></i>
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <button id="clear-inbox-btn" class="dropdown-item btn btn-outline-danger my-2 my-sm-0" type="button">Clear inbox <i class="fas fa-exclamation-triangle"></i></button>
+                <button id="logout-btn" class="dropdown-item btn btn-outline-success my-2 my-sm-0" type="button">Log out</button>
+              </div>
+            </li>
           </ul>
-          <button id="login-btn" class="hidden btn btn-outline-success my-2 my-sm-0" type="button">Log in</button>
-          <button id="logout-btn" class="hidden btn btn-outline-success my-2 my-sm-0" type="button">Log out</button>
-          <span id='user-name' class="hidden"></span>
         </div>
       </nav>
 
-      <div class="row justify-content-center align-items-center">
-        <div id="game-options" class="col-6">
-          <div class="btn-group" role="group">
-            <button id="new-btn" type="button" class="btn btn-secondary">New game</button>
-            <button id="join-btn" type="button" class="btn btn-secondary">Join game</button>
-            <button id="continue-btn" type="button" class="btn btn-secondary">Continue game</button>
-          </div>
+      <div id="content" class="row justify-content-center align-items-center">
+        <div id="game-options" class="col-6 text-center">
+          <button id="new-btn" type="button" class="btn btn-dark btn-lg"> New game</button>
+          <button id="join-btn" type="button" class="btn btn-dark btn-lg">Join game</button>
+          <button id="continue-btn" type="button" class="btn btn-dark btn-lg">Continue game</button>
         </div>
 
         <div id="new-game-options" class="col-6 hidden">
           <form>
             <div class="form-group">
               <label for="opp-webid">Please provide the WebID of your opponent</label>
-              <input type="text" class="form-control" id="opp-webid" aria-describedby="pathHelp" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me">
+              <input type="text" class="form-control rounded-0" id="opp-webid" aria-describedby="pathHelp" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me">
             </div>
             <div class="form-group">
               <label for="data-url">Please provide path on your POD to store the game</label>
-              <input type="text" class="form-control" id="data-url" aria-describedby="pathHelp" placeholder="Enter path">
-              <small id="pathHelp" class="form-text text-muted">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if exits!</small>
+              <input type="text" class="form-control rounded-0" id="data-url" aria-describedby="pathHelp" placeholder="Enter path">
+              <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if it exits!</small>
             </div>
-            <button id="start-new-game-btn" type="button" class="btn btn-primary">Start!</button>
+            <div id="custom-position-chk-group" class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="custom-position-chk">
+              <label class="custom-control-label" for="custom-position-chk">Custom start position</label>
+            </div>
+            <div id="custom-position" class="form-group hidden">
+              <input type="text" class="form-control rounded-0" id="data-url" aria-describedby="pathHelp" placeholder="Enter FEN">
+              <small id="pathHelp" class="form-text">Forsyth–Edwards Notation (FEN) is a standard notation for describing a particular board position of a chess game. The purpose of FEN is to provide all the necessary information to restart a game from a particular position.</small>
+            </div>
+            <button id="start-new-game-btn" type="button" class="btn btn-dark">Start!</button>
           </form>
         </div>
 
@@ -77,10 +91,10 @@
             </div>
             <div class="form-group">
               <label for="join-data-url">Please provide path on your POD to store the game</label>
-              <input type="text" class="form-control" id="join-data-url" aria-describedby="pathHelp" placeholder="Enter path">
-              <small id="pathHelp" class="form-text text-muted">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if exits!</small>
+              <input type="text" class="form-control rounded-0" id="join-data-url" aria-describedby="pathHelp" placeholder="Enter path">
+              <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if it exits!</small>
             </div>
-            <button id="join-game-btn" type="button" class="btn btn-primary">Join!</button>
+            <button id="join-game-btn" type="button" class="btn btn-dark">Join!</button>
           </form>
         </div>
 
@@ -92,11 +106,18 @@
               <label for="opp-webid">Select the game you want to continue</label>
               <select id="continue-game-urls"></select>
             </div>
-            <button id="continue-game-btn" type="button" class="btn btn-primary">Continue!</button>
+            <button id="continue-game-btn" type="button" class="btn btn-dark">Continue!</button>
           </form>
         </div>
 
         <div id="game" class="col-6 hidden" ></div>
+      </div>
+
+      <div id="how-it-works" class="row justify-content-center ">
+        <div id="game-options" class="col-6">
+          <h3>How it works</h3>
+          <p class="text-justify">This is a decentralized Chess app, build on the Solid platform.</p>
+        </div>
       </div>
     </div>
 
