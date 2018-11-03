@@ -164,14 +164,14 @@ auth.trackSession(async session => {
 
   if (loggedIn) {
     $('#user-menu').removeClass('hidden');
-    $('#login-btn').hide();
-    $('#new-btn').show();
-    $('#join-btn').show();
-    $('#continue-btn').show();
-    $('#data-url').show();
-    $('#data-url2').show();
-    $('#opp-url').show();
-    $('#opp-webid').show();
+    // $('#login-btn').hide();
+    // $('#new-btn').show();
+    // $('#join-btn').show();
+    // $('#continue-btn').show();
+    // $('#data-url').show();
+    // $('#data-url2').show();
+    // $('#opp-url').show();
+    // $('#opp-webid').show();
 
     userWebId = session.webId;
     const names = await Utils.getName(userWebId);
@@ -198,11 +198,11 @@ auth.trackSession(async session => {
 });
 
 function afterGameOption() {
-  $('#data-url2').hide();
-  $('#opp-url').hide();
   $('#game-options').addClass('hidden');
   $('#how-it-works').addClass('hidden');
+}
 
+function afterGameSpecificOptions() {
   const temp = $('<div id="board" style="width: 400px"></div>\n' +
   '<p>Status: <span id="status"></span></p>');
   $('#game').append(temp);
@@ -221,6 +221,7 @@ $('#start-new-game-btn').click(() => {
   if ($('#data-url').val() !== userWebId) {
     oppWebId = $('#opp-webid').val();
     userDataUrl = $('#data-url').val();
+    afterGameSpecificOptions();
     setUpNewChessGame();
   } else {
     console.warn('We are pretty sure you do not want remove your WebID.');
@@ -236,6 +237,7 @@ $('#join-btn').click(async () => {
   $('#join-looking').addClass('hidden');
 
   if (games.length > 0) {
+    $('#join-loading').addClass('hidden');
     $('#join-form').removeClass('hidden');
     const $select = $('#game-urls');
 
@@ -252,6 +254,7 @@ $('#join-game-btn').click(() => {
 
   if ($('#join-data-url').val() !== userWebId) {
     userDataUrl = $('#join-data-url').val();
+    afterGameSpecificOptions();
     JoinExistingChessGame($('#game-urls').val());
   } else {
     console.warn('We are pretty sure you do not want remove your WebID.');
@@ -266,6 +269,7 @@ $('#continue-btn').click(async () => {
   $('#continue-looking').addClass('hidden');
 
   if (games.length > 0) {
+    $('#continue-loading').addClass('hidden');
     $('#continue-form').removeClass('hidden');
     const $select = $('#continue-game-urls');
 
@@ -273,7 +277,7 @@ $('#continue-btn').click(async () => {
       $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
     });
   } else {
-    $('#no-join').removeClass('hidden');
+    $('#no-continue').removeClass('hidden');
   }
 });
 
@@ -289,6 +293,7 @@ $('#continue-game-btn').click(async () => {
 
   userDataUrl = games[i].storeUrl;
 
+  afterGameSpecificOptions();
   ContinueExistingChessGame(selectedGame);
 });
 
@@ -406,6 +411,19 @@ $('#custom-position-chk').change(() => {
   } else {
     $('#custom-position').addClass('hidden');
   }
+});
+
+$('.btn-cancel').click(() => {
+  semanticGame = null;
+  oppWebId = null;
+  opponentInboxUrl = null;
+
+  $('#game').addClass('hidden');
+  $('#new-game-options').addClass('hidden');
+  $('#join-game-options').addClass('hidden');
+  $('#continue-game-options').addClass('hidden');
+  $('#game-options').removeClass('hidden');
+  $('#how-it-works').removeClass('hidden');
 });
 
 function getNewGamePosition() {

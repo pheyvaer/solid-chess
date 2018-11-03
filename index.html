@@ -62,12 +62,18 @@
               <small id="fenHelp" class="form-text">Forsyth–Edwards Notation (FEN) is a standard notation for describing a particular board position of a chess game. The purpose of FEN is to provide all the necessary information to restart a game from a particular position.</small>
             </div>
             <button id="start-new-game-btn" type="button" class="btn btn-dark">Start!</button>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
           </form>
         </div>
 
         <div id="join-game-options" class="col-6 hidden">
-          <span id="join-looking">Looking for games to join...</span>
-          <span id="no-join" class="hidden">No games to join were found.</span>
+          <div id='join-loading'>
+            <span id="join-looking">Looking for games to join...</span>
+            <span id="no-join" class="hidden">No games to join were found.</span>
+            <div class="form-group">
+              <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+            </div>
+          </div>
           <form id="join-form" class="hidden">
             <div class="form-group">
               <label for="opp-webid">Select the game you want to join</label>
@@ -79,18 +85,25 @@
               <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if it exits!</small>
             </div>
             <button id="join-game-btn" type="button" class="btn btn-dark">Join!</button>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
           </form>
         </div>
 
         <div id="continue-game-options" class="col-6 hidden">
-          <span id="continue-looking">Looking for games to continue...</span>
-          <span id="no-continue" class="hidden">No games to join were found.</span>
+          <div id='continue-loading'>
+            <span id="continue-looking">Looking for games to continue...</span>
+            <span id="no-continue" class="hidden">No games to join were found.</span>
+            <div class="form-group">
+              <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+            </div>
+          </div>
           <form id="continue-form" class="hidden">
             <div class="form-group">
               <label for="opp-webid">Select the game you want to continue</label>
               <select id="continue-game-urls"></select>
             </div>
             <button id="continue-game-btn" type="button" class="btn btn-dark">Continue!</button>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
           </form>
         </div>
 
