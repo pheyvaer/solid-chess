@@ -1,7 +1,19 @@
 body {
   background-image: url("../img/chess-background.jpg");
   background-repeat: no-repeat;
-  background-size: auto;
+  background-size: cover;
+  color: white;
+}
+
+#navbarDropdown {
+  color: white
+}
+
+.fas {
+  color: white;
+}
+
+#user-menu {
   color: white;
 }
 
