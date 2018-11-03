@@ -334,16 +334,28 @@ async function refresh() {
     const updates = await dataSync.checkUserInboxForUpdates(await getUserInboxUrl());
 
     updates.forEach(async (fileurl) => {
-      const lastMoveUrl = semanticGame.getLastMove().url;
-      const nextMoveUrl = await Utils.getNextHalfMove(fileurl, lastMoveUrl);
+      const lastMoveUrl = semanticGame.getLastMove();
+      let nextMoveUrl;
+
+      if (lastMoveUrl) {
+        nextMoveUrl = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url);
+      } else {
+        nextMoveUrl = await Utils.getFirstHalfMove(fileurl, semanticGame.getUrl());
+      }
 
       if (nextMoveUrl) {
         console.log(nextMoveUrl);
         dataSync.deleteFileForUser(fileurl);
 
-        dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-          <${lastMoveUrl}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
-        }`);
+        if (lastMoveUrl) {
+          dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+            <${lastMoveUrl.url}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
+          }`);
+        } else {
+          dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+            <${semanticGame.getUrl()}> <${chessOnto}hasFirstHalfMove> <${nextMoveUrl}>.
+          }`);
+        }
 
         const san = await Utils.getSAN(nextMoveUrl);
         semanticGame.addMove(san, nextMoveUrl);
