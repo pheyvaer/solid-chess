@@ -52,7 +52,15 @@ async function setUpNewChessGame() {
   setUpForEveryGameOption();
   await dataSync.createEmptyFileForUser(userDataUrl);
 
-  const game = new Chess();
+  const startPosition = getNewGamePosition();
+  let game;
+
+  if (startPosition) {
+    game = new Chess(startPosition);
+  } else {
+    game = new Chess();
+  }
+
   const gameUrl = Utils.getGameUrl(userDataUrl);
   semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game);
 
@@ -387,3 +395,11 @@ $('#custom-position-chk').change(() => {
     $('#custom-position').addClass('hidden');
   }
 });
+
+function getNewGamePosition() {
+  if ($('#custom-position-chk').prop('checked')) {
+    return $('#fen').val();
+  } else {
+    return null;
+  }
+}
