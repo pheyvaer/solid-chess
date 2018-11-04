@@ -5,6 +5,11 @@ body {
   color: white;
 }
 
+a {
+  color: white!important;
+  text-decoration: underline;
+}
+
 #navbarDropdown {
   color: white
 }
