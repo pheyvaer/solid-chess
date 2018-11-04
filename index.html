@@ -45,11 +45,16 @@
         <div id="new-game-options" class="col-6 hidden">
           <form>
             <div class="form-group">
-              <label for="opp-webid">Please provide the WebID of your opponent</label>
-              <input type="text" class="form-control rounded-0" id="opp-webid" aria-describedby="pathHelp" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me">
+              <label for="game-name">Game name</label>
+              <input type="text" class="form-control rounded-0" id="game-name" placeholder="Enter the game's name">
             </div>
             <div class="form-group">
-              <label for="data-url">Please provide path on your POD to store the game</label>
+              <label for="possible-op">Your opponent</label>
+              <!-- <input type="text" class="form-control rounded-0" id="opp-webid" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me"> -->
+              <select id="possible-opps"></select>
+            </div>
+            <div class="form-group">
+              <label for="data-url">Path on your POD to store the game</label>
               <input type="text" class="form-control rounded-0" id="data-url" aria-describedby="pathHelp" placeholder="Enter path">
               <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if it exits!</small>
             </div>
@@ -76,11 +81,11 @@
           </div>
           <form id="join-form" class="hidden">
             <div class="form-group">
-              <label for="opp-webid">Select the game you want to join</label>
+              <label for="opp-webid">Game you want to join</label>
               <select id="game-urls"></select>
             </div>
             <div class="form-group">
-              <label for="join-data-url">Please provide path on your POD to store the game</label>
+              <label for="join-data-url">Path on your POD to store the game</label>
               <input type="text" class="form-control rounded-0" id="join-data-url" aria-describedby="pathHelp" placeholder="Enter path">
               <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. The file will be overwritten if it exits!</small>
             </div>
@@ -99,7 +104,7 @@
           </div>
           <form id="continue-form" class="hidden">
             <div class="form-group">
-              <label for="opp-webid">Select the game you want to continue</label>
+              <label for="continue-game-urls">Game you want to continue</label>
               <select id="continue-game-urls"></select>
             </div>
             <button id="continue-game-btn" type="button" class="btn btn-dark">Continue!</button>
@@ -107,7 +112,14 @@
           </form>
         </div>
 
-        <div id="game" class="col-4 hidden" ></div>
+        <div id="game" class="col-6 hidden" >
+          <p>Name: <span id="name-of-the-game"></span></p>
+          <div id="board" style="width: 400px"></div>
+          <div id="game-details">
+            <p>Status: <span id="status"></span></p>
+            <p>Opponent: <span id="opponent-name"></span></p>
+          </div>
+        </div>
       </div>
 
       <div id="how-it-works" class="row justify-content-center ">

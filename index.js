@@ -19,6 +19,7 @@ let userInboxUrl;
 let opponentInboxUrl;
 let oppWebId;
 let joinGames = [];
+let gameName;
 
 $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -63,7 +64,7 @@ async function setUpNewChessGame() {
   }
 
   const gameUrl = Utils.getGameUrl(userDataUrl);
-  semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game);
+  semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game, null, null, gameName);
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()}}`);
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
@@ -163,6 +164,12 @@ async function setUpBoard(game, semanticGame) {
     $('#opponent-name').text(oppWebId);
   }
 
+  if (semanticGame.getName()) {
+    $('#name-of-the-game').text(semanticGame.getName());
+  } else {
+    $('#name-of-the-game').text(semanticGame.getUrl());
+  }
+
   updateStatus();
 }
 
@@ -191,26 +198,34 @@ function afterGameOption() {
 }
 
 function afterGameSpecificOptions() {
-  const temp = $(`<div id="board" style="width: 400px"></div>\n
-  <div id="game-details">
-    <p>Status: <span id="status"></span></p>
-    <p>Opponent: <span id="opponent-name"></span></p>
-  </div>`);
-  $('#game').append(temp);
 }
 
-$('#new-btn').click(() => {
+$('#new-btn').click(async () => {
   afterGameOption();
   $('#new-game-options').removeClass('hidden');
   $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
+
+  const friendIds = await Utils.getFriendsWebIds(userWebId);
+  const $select = $('#possible-opps');
+
+  friendIds.forEach(async id => {
+    let name = await getFormattedName(id);
+
+    if (!name) {
+      name = id;
+    }
+
+    $select.append(`<option value="${id}">${name}</option>`);
+  });
 });
 
 $('#start-new-game-btn').click(() => {
   $('#new-game-options').addClass('hidden');
 
   if ($('#data-url').val() !== userWebId) {
-    oppWebId = $('#opp-webid').val();
+    oppWebId = $('#possible-opps').val();
     userDataUrl = $('#data-url').val();
+    gameName = $('#game-name').val();
     afterGameSpecificOptions();
     setUpNewChessGame();
   } else {
@@ -232,7 +247,13 @@ $('#join-btn').click(async () => {
     const $select = $('#game-urls');
 
     joinGames.forEach(game => {
-      $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
+      let name = game.name;
+
+      if (!name) {
+        name = game.gameUrl;
+      }
+
+      $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
     });
   } else {
     $('#no-join').removeClass('hidden');
@@ -273,8 +294,14 @@ $('#continue-btn').click(async () => {
     $('#continue-form').removeClass('hidden');
     const $select = $('#continue-game-urls');
 
-    games.forEach(game => {
-      $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
+    games.forEach(async game => {
+      let name = await Utils.getGameName(game.gameUrl);
+
+      if (!name) {
+        name = game.gameUrl;
+      }
+
+      $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
     });
   } else {
     $('#no-continue').removeClass('hidden');
@@ -384,6 +411,7 @@ async function findGamesToJoin() {
 
     if (result) {
       result.fileUrl = fileurl;
+      result.name = await Utils.getGameName(result.gameUrl);
       results.push(result);
     }
 
@@ -391,7 +419,17 @@ async function findGamesToJoin() {
   });
 
   Q.all(promises).then(() => {
-    deferred.resolve(results);
+    const gameUrls = [];
+    const keep = [];
+
+    results.forEach(r => {
+        if (gameUrls.indexOf(r.gameUrl) === -1) {
+          gameUrls.push(r.gameUrl);
+          keep.push(r);
+        }
+    });
+
+    deferred.resolve(keep);
   });
 
   return deferred.promise;
