@@ -67,11 +67,9 @@ async function setUpNewChessGame() {
     game = new Chess();
   }
 
-  let turn = game.turn();
+  let turn = 'white';
 
-  if (turn === 'w') {
-    turn = 'white';
-  } else {
+  if (game.turn() === 'b') {
     turn = 'black';
   }
 
