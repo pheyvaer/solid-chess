@@ -7,7 +7,7 @@ Requests to join and updates of a game are sent to the inbox of your opponent di
 
 Check the live version or the screencast.
 
-WARNING: The "Clear inbox" button removes **all** files in your inbox! So be careful!
+WARNING: The "Clear inbox" button **removes all files** in your inbox! So be careful!
 
 ## What you can do
 - Create a new game, which will send a request to join to your opponent.
