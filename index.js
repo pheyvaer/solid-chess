@@ -67,11 +67,18 @@ async function setUpNewChessGame() {
     game = new Chess();
   }
 
-  const gameUrl = Utils.getGameUrl(userDataUrl);
-  semanticGame = new SemanticChessGame(gameUrl, userDataUrl, userWebId, oppWebId, 'white', game, null, null, gameName);
+  let turn = game.turn();
 
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()}}`);
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
+  if (turn === 'w') {
+    turn = 'white';
+  } else {
+    turn = 'black';
+  }
+
+  const gameUrl = Utils.getGameUrl(userDataUrl);
+  semanticGame = new SemanticChessGame({url: gameUrl, userDataUrl, userWebId, opponentWebId: oppWebId, chessGame: game, name: gameName, startPosition, turn});
+
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()} \n <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
   dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
   dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
 
