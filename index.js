@@ -20,6 +20,7 @@ let opponentInboxUrl;
 let oppWebId;
 let joinGames = [];
 let gameName;
+let refreshIntervalId;
 
 $('.login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -51,7 +52,7 @@ async function setUpForEveryGameOption() {
 
 function setUpAfterEveryGameOptionIsSetUp() {
   // refresh every 5sec
-  setInterval(refresh, 5000);
+  refreshIntervalId = setInterval(refresh, 5000);
 }
 
 async function setUpNewChessGame() {
@@ -495,6 +496,11 @@ $('#stop-playing').click(() => {
   $('#how-it-works').removeClass('hidden');
   semanticGame = null;
   board = null;
+
+  if (refreshIntervalId) {
+    clearInterval(refreshIntervalId);
+    refreshIntervalId = null;
+  }
 });
 
 $('#custom-position-chk').change(() => {
