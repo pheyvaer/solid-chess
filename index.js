@@ -18,6 +18,7 @@ let userDataUrl;
 let userInboxUrl;
 let opponentInboxUrl;
 let oppWebId;
+let joinGames = [];
 
 $('#login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -222,15 +223,15 @@ $('#join-btn').click(async () => {
   $('#join-game-options').removeClass('hidden');
   $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
 
-  const games = await findGamesToJoin();
+  joinGames = await findGamesToJoin();
   $('#join-looking').addClass('hidden');
 
-  if (games.length > 0) {
+  if (joinGames.length > 0) {
     $('#join-loading').addClass('hidden');
     $('#join-form').removeClass('hidden');
     const $select = $('#game-urls');
 
-    games.forEach(game => {
+    joinGames.forEach(game => {
       $select.append($(`<option value="${game.gameUrl}">${game.gameUrl}</option>`));
     });
   } else {
@@ -243,10 +244,20 @@ $('#join-game-btn').click(() => {
 
   if ($('#join-data-url').val() !== userWebId) {
     userDataUrl = $('#join-data-url').val();
+    const gameUrl = $('#game-urls').val();
+
+    let i = 0;
+
+    while (i < joinGames.length && joinGames[i].gameUrl !== gameUrl) {
+        i ++;
+    }
+
+    dataSync.deleteFileForUser(joinGames[i].fileUrl);
+
     afterGameSpecificOptions();
-    JoinExistingChessGame($('#game-urls').val());
+    JoinExistingChessGame(gameUrl);
   } else {
-    console.warn('We are pretty sure you do not want remove your WebID.');
+    console.warn('We are pretty sure you do not want to remove your WebID.');
   }
 });
 
