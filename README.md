@@ -13,7 +13,7 @@ Check the live version or the screencast.
 - Continue a game you started earlier
 
 ## Used technologies/concepts
-- [Linked Data](https://en.wikipedia.org/wiki/Linked_data): to store the details of the games
+- [Linked Data](https://en.wikipedia.org/wiki/Linked_data): to represent/share the details of the games
 - [Decentralization](https://en.wikipedia.org/wiki/Decentralization#Information_technology): information is fetched from different servers
 - [Solid PODs](https://solid.inrupt.com/get-a-solid-pod): store personal data about the games
 - [SPARQL](https://www.w3.org/TR/2013/REC-sparql11-overview-20130321/): query/update games
