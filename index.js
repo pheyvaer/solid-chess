@@ -198,7 +198,7 @@ auth.trackSession(async session => {
       $('#user-name').text(name);
     }
   } else {
-    $('#login-btn').removeClass('hidden');
+    $('#nav-login-btn').removeClass('hidden');
     $('#user-menu').addClass('hidden');
     $('#game').addClass('hidden');
     $('#new-game-options').addClass('hidden');

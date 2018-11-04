@@ -5,7 +5,7 @@ No central sever is required to run or set up a game.
 All personal data about the game is stored on your POD.
 Requests to join and updates of a game are sent to the inbox of your opponent directly.
 
-Check the live version or the screencast.
+Check the [live version](https://pheyvaer.github.io/solid-chess/) or the screencast.
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
 
