@@ -21,7 +21,7 @@
 
         <div class="navbar-collapse collapse w-100 order-3 dual-collapse2" id="navbarSupportedContent">
           <ul class="navbar-nav ml-auto">
-            <li><button id="login-btn" class="hidden btn btn-dark my-2 my-sm-0" type="button">Log in</button></li>
+            <li><button class="login-btn hidden btn btn-dark my-2 my-sm-0" type="button">Log in</button></li>
             <li id="user-menu" class="hidden nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-user"></i><span id='user-name' class="hidden"></span>
@@ -122,8 +122,8 @@
         </div>
       </div>
 
-      <div id="how-it-works" class="row justify-content-center ">
-        <div id="game-options" class="col-6">
+      <div id="how-it-works" class="row justify-content-center">
+        <div class="col-6">
           <h3>How it works</h3>
           <p class="text-justify">
             This is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/">Solid</a>.
@@ -131,6 +131,26 @@
             All personal data about the game is stored on your POD.
             Requests to join and updates of a game are sent to the inbox of your opponent directly.
           </p>
+        </div>
+      </div>
+
+      <div class="modal fade" id="login-required" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Login required</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              Please login to play a game.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="login-btn btn btn-dark">Login</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

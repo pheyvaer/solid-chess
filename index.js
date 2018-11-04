@@ -21,8 +21,12 @@ let oppWebId;
 let joinGames = [];
 let gameName;
 
-$('#login-btn').click(() => {
+$('.login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
+});
+
+$('#logout-btn').click(() => {
+  auth.logout();
 });
 
 async function getUserInboxUrl() {
@@ -175,10 +179,11 @@ async function setUpBoard(game, semanticGame) {
 
 auth.trackSession(async session => {
   const loggedIn = !!session;
-  console.log(`logged in: ${loggedIn}`);
+  //console.log(`logged in: ${loggedIn}`);
 
   if (loggedIn) {
     $('#user-menu').removeClass('hidden');
+    $('#login-required').modal('hide');
 
     userWebId = session.webId;
     const name = await getFormattedName(userWebId);
@@ -189,6 +194,14 @@ auth.trackSession(async session => {
     }
   } else {
     $('#login-btn').removeClass('hidden');
+    $('#user-menu').addClass('hidden');
+    $('#game').addClass('hidden');
+    $('#new-game-options').addClass('hidden');
+    $('#join-game-options').addClass('hidden');
+    $('#continue-game-options').addClass('hidden');
+    $('#game-options').removeClass('hidden');
+    $('#how-it-works').removeClass('hidden');
+    userWebId = null;
   }
 });
 
@@ -201,22 +214,26 @@ function afterGameSpecificOptions() {
 }
 
 $('#new-btn').click(async () => {
-  afterGameOption();
-  $('#new-game-options').removeClass('hidden');
-  $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
+  if (userWebId) {
+    afterGameOption();
+    $('#new-game-options').removeClass('hidden');
+    $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
 
-  const friendIds = await Utils.getFriendsWebIds(userWebId);
-  const $select = $('#possible-opps');
+    const friendIds = await Utils.getFriendsWebIds(userWebId);
+    const $select = $('#possible-opps');
 
-  friendIds.forEach(async id => {
-    let name = await getFormattedName(id);
+    friendIds.forEach(async id => {
+      let name = await getFormattedName(id);
 
-    if (!name) {
-      name = id;
-    }
+      if (!name) {
+        name = id;
+      }
 
-    $select.append(`<option value="${id}">${name}</option>`);
-  });
+      $select.append(`<option value="${id}">${name}</option>`);
+    });
+  } else {
+    $('#login-required').modal('show');
+  }
 });
 
 $('#start-new-game-btn').click(() => {
@@ -234,29 +251,33 @@ $('#start-new-game-btn').click(() => {
 });
 
 $('#join-btn').click(async () => {
-  afterGameOption();
-  $('#join-game-options').removeClass('hidden');
-  $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
+  if (userWebId) {
+    afterGameOption();
+    $('#join-game-options').removeClass('hidden');
+    $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
 
-  joinGames = await findGamesToJoin();
-  $('#join-looking').addClass('hidden');
+    joinGames = await findGamesToJoin();
+    $('#join-looking').addClass('hidden');
 
-  if (joinGames.length > 0) {
-    $('#join-loading').addClass('hidden');
-    $('#join-form').removeClass('hidden');
-    const $select = $('#game-urls');
+    if (joinGames.length > 0) {
+      $('#join-loading').addClass('hidden');
+      $('#join-form').removeClass('hidden');
+      const $select = $('#game-urls');
 
-    joinGames.forEach(game => {
-      let name = game.name;
+      joinGames.forEach(game => {
+        let name = game.name;
 
-      if (!name) {
-        name = game.gameUrl;
-      }
+        if (!name) {
+          name = game.gameUrl;
+        }
 
-      $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
-    });
+        $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
+      });
+    } else {
+      $('#no-join').removeClass('hidden');
+    }
   } else {
-    $('#no-join').removeClass('hidden');
+    $('#login-required').show('hide');
   }
 });
 
@@ -283,28 +304,32 @@ $('#join-game-btn').click(() => {
 });
 
 $('#continue-btn').click(async () => {
-  afterGameOption();
-  $('#continue-game-options').removeClass('hidden');
+  if (userWebId) {
+    afterGameOption();
+    $('#continue-game-options').removeClass('hidden');
 
-  const games = await Utils.getGamesToContinue(userWebId);
-  $('#continue-looking').addClass('hidden');
+    const games = await Utils.getGamesToContinue(userWebId);
+    $('#continue-looking').addClass('hidden');
 
-  if (games.length > 0) {
-    $('#continue-loading').addClass('hidden');
-    $('#continue-form').removeClass('hidden');
-    const $select = $('#continue-game-urls');
+    if (games.length > 0) {
+      $('#continue-loading').addClass('hidden');
+      $('#continue-form').removeClass('hidden');
+      const $select = $('#continue-game-urls');
 
-    games.forEach(async game => {
-      let name = await Utils.getGameName(game.gameUrl);
+      games.forEach(async game => {
+        let name = await Utils.getGameName(game.gameUrl);
 
-      if (!name) {
-        name = game.gameUrl;
-      }
+        if (!name) {
+          name = game.gameUrl;
+        }
 
-      $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
-    });
+        $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
+      });
+    } else {
+      $('#no-continue').removeClass('hidden');
+    }
   } else {
-    $('#no-continue').removeClass('hidden');
+    $('#login-required').modal('show');
   }
 });
 
