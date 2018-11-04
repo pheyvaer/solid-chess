@@ -278,7 +278,7 @@ $('#join-btn').click(async () => {
           name = game.gameUrl;
         }
 
-        $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
+        $select.append($(`<option value="${game.gameUrl}">${name} (${game.opponentsName})</option>`));
       });
     } else {
       $('#no-join').removeClass('hidden');
@@ -424,7 +424,7 @@ async function refresh() {
           }
 
           update += '}';
-          
+
           dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
         } else {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
@@ -455,6 +455,7 @@ async function findGamesToJoin() {
     if (result) {
       result.fileUrl = fileurl;
       result.name = await Utils.getGameName(result.gameUrl);
+      result.opponentsName = await getFormattedName(result.opponentWebId);
       results.push(result);
     }
 
