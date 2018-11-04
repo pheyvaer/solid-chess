@@ -400,9 +400,12 @@ async function refresh() {
     updates.forEach(async (fileurl) => {
       const lastMoveUrl = semanticGame.getLastMove();
       let nextMoveUrl;
+      let endsGame = false;
 
       if (lastMoveUrl) {
-        nextMoveUrl = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url);
+        const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, semanticGame.getUrl());
+        nextMoveUrl = r.move;
+        endsGame = r.endsGame;
       } else {
         nextMoveUrl = await Utils.getFirstHalfMove(fileurl, semanticGame.getUrl());
       }
@@ -412,9 +415,17 @@ async function refresh() {
         dataSync.deleteFileForUser(fileurl);
 
         if (lastMoveUrl) {
-          dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+          let update = `INSERT DATA {
             <${lastMoveUrl.url}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
-          }`);
+          `;
+
+          if (endsGame) {
+            update += `<${semanticGame.getUrl()}> <${chessOnto}hasLastHalfMove> <${nextMoveUrl}>.`;
+          }
+
+          update += '}';
+          
+          dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
         } else {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
             <${semanticGame.getUrl()}> <${chessOnto}hasFirstHalfMove> <${nextMoveUrl}>.
