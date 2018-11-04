@@ -202,6 +202,8 @@ auth.trackSession(async session => {
     $('#game-options').removeClass('hidden');
     $('#how-it-works').removeClass('hidden');
     userWebId = null;
+    semanticGame = null;
+    board = null;
   }
 });
 
@@ -466,6 +468,14 @@ $('#clear-inbox-btn').click(async () => {
   resources.forEach(r => {
     dataSync.deleteFileForUser(r);
   });
+});
+
+$('#stop-playing').click(() => {
+  $('#game').addClass('hidden');
+  $('#game-options').removeClass('hidden');
+  $('#how-it-works').removeClass('hidden');
+  semanticGame = null;
+  board = null;
 });
 
 $('#custom-position-chk').change(() => {
