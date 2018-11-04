@@ -482,8 +482,10 @@ async function findGamesToJoin() {
 $('#clear-inbox-btn').click(async () => {
   const resources = await dataSync.getAllResourcesInInbox(await getUserInboxUrl());
 
-  resources.forEach(r => {
-    dataSync.deleteFileForUser(r);
+  resources.forEach(async r => {
+    if (await Utils.fileContainsChessInfo(r)) {
+      dataSync.deleteFileForUser(r);
+    }
   });
 });
 
