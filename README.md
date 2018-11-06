@@ -26,7 +26,8 @@ WARNING: The "Clear inbox" button **removes all files with (chess) game data** i
 
 ## Install
 
-You can run the game locally via the following:
+You can run the game locally by doing the following:
+- Clone this repo.
 - `npm i`: install Node.js dependencies.
 - `npm run build`: bundle the JavaScript via Webpack. The result can be found in `dist/main.js`.
 - Serve the contents of the folder, e.g., via `http-server`.
