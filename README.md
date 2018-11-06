@@ -24,5 +24,12 @@ WARNING: The "Clear inbox" button **removes all files with (chess) game data** i
 - [chess.js](https://github.com/jhlywa/chess.js): chess engine
 - [chessboard.js](https://github.com/oakmac/chessboardjs/): chessboard
 
+## Install
+
+You can run the game locally via the following:
+- `npm i`: install Node.js dependencies.
+- `npm run build`: bundle the JavaScript via Webpack. The result can be found in `dist/main.js`.
+- Serve the contents of the folder, e.g., via `http-server`.
+
 ## License
 © 2018 [Pieter Heyvaert](https://pieterheyvaert.com), [MIT License](https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md)
