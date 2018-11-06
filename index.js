@@ -4,10 +4,8 @@ const SemanticChessGame = require('./lib/semanticchess');
 const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
-const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
-const joinGameRequest = 'http://example.org/game/asksToJoin';
+const namespaces = require('./lib/namespaces');
 const storeIn = 'http://example.org/storage/storeIn';
-const participatesIn = 'http://example.org/game/participatesIn';
 const Q = require('q');
 
 let userWebId;
@@ -78,8 +76,8 @@ async function setUpNewChessGame() {
   semanticGame = new SemanticChessGame({url: gameUrl, userDataUrl, userWebId, opponentWebId: oppWebId, chessGame: game, name: gameName, startPosition, turn});
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()} \n <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
-  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(game, semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -92,10 +90,10 @@ async function JoinExistingChessGame(gameUrl) {
 
   await dataSync.createEmptyFileForUser(userDataUrl);
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-    <${gameUrl}> a <${chessOnto}ChessGame>;
+    <${gameUrl}> a <${namespaces.chess}ChessGame>;
       <${storeIn}> <${userDataUrl}>.
   }`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
 
   setUpBoard(semanticGame.getChessGame(), semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -417,11 +415,11 @@ async function refresh() {
 
         if (lastMoveUrl) {
           let update = `INSERT DATA {
-            <${lastMoveUrl.url}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
+            <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
           `;
 
           if (endsGame) {
-            update += `<${semanticGame.getUrl()}> <${chessOnto}hasLastHalfMove> <${nextMoveUrl}>.`;
+            update += `<${semanticGame.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
           }
 
           update += '}';
@@ -429,7 +427,7 @@ async function refresh() {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
         } else {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-            <${semanticGame.getUrl()}> <${chessOnto}hasFirstHalfMove> <${nextMoveUrl}>.
+            <${semanticGame.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
           }`);
         }
 
