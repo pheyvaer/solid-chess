@@ -1,11 +1,9 @@
 const Chessboard = require('./lib/chessboard');
-const Chess = require('chess.js');
-const SemanticChessGame = require('./lib/semanticchess');
+const {SemanticChess, Loader} = require('semantic-chess').SemanticChess;
 const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
 const namespaces = require('./lib/namespaces');
-const storeIn = 'http://example.org/storage/storeIn';
 const Q = require('q');
 
 let userWebId;
@@ -58,57 +56,47 @@ async function setUpNewChessGame() {
   await dataSync.createEmptyFileForUser(userDataUrl);
 
   const startPosition = getNewGamePosition();
-  let game;
-
-  if (startPosition) {
-    game = new Chess(startPosition);
-  } else {
-    game = new Chess();
-  }
-
-  let turn = 'white';
-
-  if (game.turn() === 'b') {
-    turn = 'black';
-  }
-
   const gameUrl = Utils.getGameUrl(userDataUrl);
-  semanticGame = new SemanticChessGame({url: gameUrl, userDataUrl, userWebId, opponentWebId: oppWebId, chessGame: game, name: gameName, startPosition, turn});
+  semanticGame = new SemanticChess({url: gameUrl, moveBaseUrl: userDataUrl, userWebId, opponentWebId: oppWebId, name: gameName, startPosition});
 
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()} \n <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
   dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
 
-  setUpBoard(game, semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function JoinExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
-  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  const loader = new Loader();
+  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = semanticGame.getOpponentWebId();
 
   await dataSync.createEmptyFileForUser(userDataUrl);
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
     <${gameUrl}> a <${namespaces.chess}ChessGame>;
-      <${storeIn}> <${userDataUrl}>.
+      <${namespaces.storage}storeIn> <${userDataUrl}>.
   }`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
 
-  setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function ContinueExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
-  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  const loader = new Loader();
+  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = semanticGame.getOpponentWebId();
 
-  setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function setUpBoard(game, semanticGame) {
+async function setUpBoard(semanticGame) {
+  const game = semanticGame.getChess();
+
   // do not pick up pieces if the game is over
   // only pick up pieces for the side to move
   var onDragStart = function(source, piece, position, orientation) {
@@ -155,7 +143,6 @@ async function setUpBoard(game, semanticGame) {
 
   var cfg = {
     draggable: true,
-    position: 'start',
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
