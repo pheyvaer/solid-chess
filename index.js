@@ -1,13 +1,9 @@
 const Chessboard = require('./lib/chessboard');
-const Chess = require('chess.js');
-const SemanticChessGame = require('./lib/semanticchess');
+const {SemanticChess, Loader} = require('semantic-chess');
 const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
-const chessOnto = 'http://purl.org/NET/rdfchess/ontology/';
-const joinGameRequest = 'http://example.org/game/asksToJoin';
-const storeIn = 'http://example.org/storage/storeIn';
-const participatesIn = 'http://example.org/game/participatesIn';
+const namespaces = require('./lib/namespaces');
 const Q = require('q');
 
 let userWebId;
@@ -21,6 +17,10 @@ let oppWebId;
 let joinGames = [];
 let gameName;
 let refreshIntervalId;
+const fullColor = {
+  'w': 'white',
+  'b': 'black'
+}
 
 $('.login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -60,61 +60,51 @@ async function setUpNewChessGame() {
   await dataSync.createEmptyFileForUser(userDataUrl);
 
   const startPosition = getNewGamePosition();
-  let game;
-
-  if (startPosition) {
-    game = new Chess(startPosition);
-  } else {
-    game = new Chess();
-  }
-
-  let turn = 'white';
-
-  if (game.turn() === 'b') {
-    turn = 'black';
-  }
-
   const gameUrl = Utils.getGameUrl(userDataUrl);
-  semanticGame = new SemanticChessGame({url: gameUrl, userDataUrl, userWebId, opponentWebId: oppWebId, chessGame: game, name: gameName, startPosition, turn});
+  semanticGame = new SemanticChess({url: gameUrl, moveBaseUrl: userDataUrl, userWebId, opponentWebId: oppWebId, name: gameName, startPosition});
 
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getGameRDF()} \n <${gameUrl}> <${storeIn}> <${userDataUrl}>}`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
-  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${joinGameRequest}> <${semanticGame.getUrl()}>.`);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
+  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
 
-  setUpBoard(game, semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function JoinExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
-  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  const loader = new Loader();
+  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = semanticGame.getOpponentWebId();
 
   await dataSync.createEmptyFileForUser(userDataUrl);
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-    <${gameUrl}> a <${chessOnto}ChessGame>;
-      <${storeIn}> <${userDataUrl}>.
+    <${gameUrl}> a <${namespaces.chess}ChessGame>;
+      <${namespaces.storage}storeIn> <${userDataUrl}>.
   }`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${participatesIn}> <${gameUrl}>. <${gameUrl}> <${storeIn}> <${userDataUrl}>.}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
 
-  setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
 async function ContinueExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
-  semanticGame = await SemanticChessGame.generateFromUrl(gameUrl, userWebId, userDataUrl);
+  const loader = new Loader();
+  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = semanticGame.getOpponentWebId();
 
-  setUpBoard(semanticGame.getChessGame(), semanticGame);
+  setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function setUpBoard(game, semanticGame) {
+async function setUpBoard(semanticGame) {
+  const game = semanticGame.getChess();
+
   // do not pick up pieces if the game is over
   // only pick up pieces for the side to move
   var onDragStart = function(source, piece, position, orientation) {
-    const userColor = semanticGame.getUserColor()[0];
+    const userColor = semanticGame.getUserColor();
 
     if (game.game_over() === true || userColor !== game.turn()) {
       return false;
@@ -129,7 +119,7 @@ async function setUpBoard(game, semanticGame) {
 
   var onDrop = async function(source, target) {
     // see if the move is legal
-    var move = game.move({
+    const move = semanticGame.doMove({
       from: source,
       to: target,
       promotion: 'q' // NOTE: always promote to a queen for example simplicity
@@ -138,12 +128,10 @@ async function setUpBoard(game, semanticGame) {
     // illegal move
     if (move === null) return 'snapback';
 
-    let result = semanticGame.addMove(move.san);
+    dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
-    dataSync.executeSPARQLUpdateForUser(userDataUrl, result.sparqlUpdate);
-
-    if (result.notification) {
-      dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), result.notification);
+    if (move.notification) {
+      dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), move.notification);
     }
 
     updateStatus();
@@ -157,12 +145,11 @@ async function setUpBoard(game, semanticGame) {
 
   var cfg = {
     draggable: true,
-    position: 'start',
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
     position: game.fen(),
-    orientation: semanticGame.getUserColor()
+    orientation: fullColor[semanticGame.getUserColor()]
   };
 
   board = ChessBoard('board', cfg);
@@ -317,12 +304,13 @@ $('#continue-btn').click(async () => {
     $('#continue-game-options').removeClass('hidden');
 
     const games = await Utils.getGamesToContinue(userWebId);
+    const $select = $('#continue-game-urls');
     $('#continue-looking').addClass('hidden');
+    $select.empty();
 
     if (games.length > 0) {
       $('#continue-loading').addClass('hidden');
       $('#continue-form').removeClass('hidden');
-      const $select = $('#continue-game-urls');
 
       games.forEach(async game => {
         let name = await Utils.getGameName(game.gameUrl);
@@ -360,7 +348,7 @@ $('#continue-game-btn').click(async () => {
 function updateStatus() {
   var statusEl = $('#status');
   var status = '';
-  const game = semanticGame.getChessGame();
+  const game = semanticGame.getChess();
 
   var moveColor = 'White';
   if (game.turn() === 'b') {
@@ -417,11 +405,11 @@ async function refresh() {
 
         if (lastMoveUrl) {
           let update = `INSERT DATA {
-            <${lastMoveUrl.url}> <${chessOnto}nextHalfMove> <${nextMoveUrl}>.
+            <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
           `;
 
           if (endsGame) {
-            update += `<${semanticGame.getUrl()}> <${chessOnto}hasLastHalfMove> <${nextMoveUrl}>.`;
+            update += `<${semanticGame.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
           }
 
           update += '}';
@@ -429,13 +417,13 @@ async function refresh() {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
         } else {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-            <${semanticGame.getUrl()}> <${chessOnto}hasFirstHalfMove> <${nextMoveUrl}>.
+            <${semanticGame.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
           }`);
         }
 
         const san = await Utils.getSAN(nextMoveUrl);
-        semanticGame.addMove(san, nextMoveUrl);
-        board.position(semanticGame.getChessGame().fen());
+        semanticGame.loadMove(san, {url: nextMoveUrl});
+        board.position(semanticGame.getChess().fen());
         updateStatus();
       }
     });
