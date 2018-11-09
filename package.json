@@ -22,11 +22,11 @@
     "webpack-cli": "^3.1.2"
   },
   "dependencies": {
-    "@comunica/actor-init-sparql-rdfjs": "^1.4.1",
+    "@comunica/actor-init-sparql-rdfjs": "1.4.2",
     "n3": "^1.0.0-beta.2",
     "prefix-ns": "^0.1.2",
     "q": "^1.5.1",
-    "semantic-chess": "0.0.2",
+    "semantic-chess": "0.0.5",
     "solid-auth-client": "^2.2.10",
     "streamify-array": "^1.0.1",
     "uniqid": "^5.0.3",
