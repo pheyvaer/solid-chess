@@ -5,6 +5,7 @@ const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
 const namespaces = require('./lib/namespaces');
 const Q = require('q');
+const { default: data } = require('@solid/query-ldflex');
 
 let userWebId;
 let semanticGame;
@@ -32,7 +33,7 @@ $('#logout-btn').click(() => {
 
 async function getUserInboxUrl() {
   if (!userInboxUrl) {
-    userInboxUrl = await Utils.getInboxUrl(userWebId);
+    userInboxUrl = (await data[userWebId].inbox).value;
   }
 
   return userInboxUrl;
@@ -40,7 +41,7 @@ async function getUserInboxUrl() {
 
 async function getOpponentInboxUrl() {
   if (!opponentInboxUrl) {
-    opponentInboxUrl = await Utils.getInboxUrl(oppWebId);
+    opponentInboxUrl = (await data[oppWebId].inbox).value;
   }
 
   return opponentInboxUrl;
@@ -215,6 +216,7 @@ $('#new-btn').click(async () => {
     $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
 
     const friendIds = await Utils.getFriendsWebIds(userWebId);
+    console.log((await data[userWebId].friends).length);
     const $select = $('#possible-opps');
 
     friendIds.forEach(async id => {
@@ -421,7 +423,7 @@ async function refresh() {
           }`);
         }
 
-        const san = await Utils.getSAN(nextMoveUrl);
+        const san = (await data[nextMoveUrl][namespaces.chess + 'hasSANRecord']).value;
         semanticGame.loadMove(san, {url: nextMoveUrl});
         board.position(semanticGame.getChess().fen());
         updateStatus();
@@ -521,22 +523,27 @@ function getNewGamePosition() {
 }
 
 async function getFormattedName(webid) {
-  const names = await Utils.getName(webid);
-  let n = null;
+  let formattedName = await data[webid].name;
 
-  if (names) {
-    if (names.fullname) {
-      n = names.fullname;
-    } else {
-      if (names.firstname) {
-        n += names.firstname;
+  if (!formattedName) {
+    formattedName = null;
+    const firstname = await data[webid].givenName;
+    const lastname = await data[webid].familyName;
+
+    if (firstname) {
+      formattedName = firstname;
+    }
+
+    if (lastname) {
+      if (formattedName) {
+        formattedName += ' ';
+      } else {
+        formattedName = '';
       }
 
-      if (names.lastname) {
-        n += names.lastname;
-      }
+      formattedName += lastname;
     }
   }
 
-  return n;
+  return formattedName;
 }
