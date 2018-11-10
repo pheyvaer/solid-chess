@@ -4,7 +4,6 @@ const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
 const Utils = require('./lib/utils');
 const namespaces = require('./lib/namespaces');
-const Q = require('q');
 const { default: data } = require('@solid/query-ldflex');
 
 let userWebId;
@@ -12,8 +11,6 @@ let semanticGame;
 let dataSync = new DataSync();
 let board;
 let userDataUrl;
-let userInboxUrl;
-let opponentInboxUrl;
 let oppWebId;
 let joinGames = [];
 let gameName;
@@ -31,21 +28,7 @@ $('#logout-btn').click(() => {
   auth.logout();
 });
 
-async function getUserInboxUrl() {
-  if (!userInboxUrl) {
-    userInboxUrl = (await data[userWebId].inbox).value;
-  }
-
-  return userInboxUrl;
-}
-
-async function getOpponentInboxUrl() {
-  if (!opponentInboxUrl) {
-    opponentInboxUrl = (await data[oppWebId].inbox).value;
-  }
-
-  return opponentInboxUrl;
-}
+$('#refresh-btn').click(refresh);
 
 async function setUpForEveryGameOption() {
   $('#game').removeClass('hidden');
@@ -65,7 +48,7 @@ async function setUpNewChessGame() {
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
   dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
-  dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
+  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
 
   setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -103,7 +86,7 @@ async function setUpBoard(semanticGame) {
 
   // do not pick up pieces if the game is over
   // only pick up pieces for the side to move
-  var onDragStart = function(source, piece, position, orientation) {
+  const onDragStart = function(source, piece, position, orientation) {
     const userColor = semanticGame.getUserColor();
 
     if (game.game_over() === true || userColor !== game.turn()) {
@@ -117,7 +100,7 @@ async function setUpBoard(semanticGame) {
     }
   };
 
-  var onDrop = async function(source, target) {
+  const onDrop = async function(source, target) {
     // see if the move is legal
     const move = semanticGame.doMove({
       from: source,
@@ -131,7 +114,7 @@ async function setUpBoard(semanticGame) {
     dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
     if (move.notification) {
-      dataSync.sendToOpponentsInbox(await getOpponentInboxUrl(), move.notification);
+      dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification);
     }
 
     updateStatus();
@@ -139,11 +122,11 @@ async function setUpBoard(semanticGame) {
 
   // update the board position after the piece snap
   // for castling, en passant, pawn promotion
-  var onSnapEnd = function() {
+  const onSnapEnd = function() {
     board.position(game.fen());
   };
 
-  var cfg = {
+  const cfg = {
     draggable: true,
     onDragStart: onDragStart,
     onDrop: onDrop,
@@ -242,7 +225,7 @@ $('#join-btn').click(async () => {
     $('#join-game-options').removeClass('hidden');
     $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
 
-    joinGames = await findGamesToJoin();
+    joinGames = await Utils.findGamesToJoin(userWebId, dataSync);
     $('#join-looking').addClass('hidden');
 
     if (joinGames.length > 0) {
@@ -371,15 +354,14 @@ function updateStatus() {
   }
 
   statusEl.html(status);
-};
+}
 
-$('#refresh-btn').click(refresh);
 
 async function refresh() {
   console.log('refresh started');
 
   if (semanticGame.isOpponentsTurn()) {
-    const updates = await dataSync.checkUserInboxForUpdates(await getUserInboxUrl());
+    const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId));
 
     updates.forEach(async (fileurl) => {
       const lastMoveUrl = semanticGame.getLastMove();
@@ -425,51 +407,8 @@ async function refresh() {
   }
 }
 
-async function findGamesToJoin() {
-  const deferred = Q.defer();
-  const promises = [];
-  const updates = await dataSync.checkUserInboxForUpdates(await getUserInboxUrl());
-  const results = [];
-
-  updates.forEach(async (fileurl) => {
-    const d = Q.defer();
-    promises.push(d.promise);
-    const result = await Utils.getJoinRequest(fileurl);
-
-    if (result) {
-      result.fileUrl = fileurl;
-      result.name = await data[result.gameUrl]['http://schema.org/name'];
-
-      if (name) {
-          result.name = result.name.value;
-      }
-
-      result.opponentsName = await Utils.getFormattedName(result.opponentWebId);
-      results.push(result);
-    }
-
-    d.resolve();
-  });
-
-  Q.all(promises).then(() => {
-    const gameUrls = [];
-    const keep = [];
-
-    results.forEach(r => {
-        if (gameUrls.indexOf(r.gameUrl) === -1) {
-          gameUrls.push(r.gameUrl);
-          keep.push(r);
-        }
-    });
-
-    deferred.resolve(keep);
-  });
-
-  return deferred.promise;
-}
-
 $('#clear-inbox-btn').click(async () => {
-  const resources = await dataSync.getAllResourcesInInbox(await getUserInboxUrl());
+  const resources = await dataSync.getAllResourcesInInbox(await Utils.getInboxUrl(userWebId));
 
   resources.forEach(async r => {
     if (await Utils.fileContainsChessInfo(r)) {
@@ -502,7 +441,6 @@ $('#custom-position-chk').change(() => {
 $('.btn-cancel').click(() => {
   semanticGame = null;
   oppWebId = null;
-  opponentInboxUrl = null;
 
   $('#game').addClass('hidden');
   $('#new-game-options').addClass('hidden');
