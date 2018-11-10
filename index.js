@@ -6,6 +6,7 @@ const Utils = require('./lib/utils');
 const namespaces = require('./lib/namespaces');
 const Q = require('q');
 const { default: data } = require('@solid/query-ldflex');
+require('./css/main.less');
 
 let userWebId;
 let semanticGame;
@@ -21,7 +22,7 @@ let refreshIntervalId;
 const fullColor = {
   'w': 'white',
   'b': 'black'
-}
+};
 
 $('.login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -522,3 +523,15 @@ function getNewGamePosition() {
     return null;
   }
 }
+
+let width = $(window).width();
+
+$(window).on('resize', function(){
+  if($(this).width() !== width){
+    width = $(this).width();
+
+    if (board) {
+      board.resize();
+    }
+  }
+});
