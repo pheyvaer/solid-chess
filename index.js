@@ -21,7 +21,7 @@ let refreshIntervalId;
 const fullColor = {
   'w': 'white',
   'b': 'black'
-}
+};
 
 $('.login-btn').click(() => {
   auth.popupLogin({ popupUri: 'popup.html' });
@@ -58,10 +58,9 @@ function setUpAfterEveryGameOptionIsSetUp() {
 
 async function setUpNewChessGame() {
   setUpForEveryGameOption();
-  await dataSync.createEmptyFileForUser(userDataUrl);
 
   const startPosition = getNewGamePosition();
-  const gameUrl = Utils.getGameUrl(userDataUrl);
+  const gameUrl = await Utils.getGameUrl(userDataUrl);
   semanticGame = new SemanticChess({url: gameUrl, moveBaseUrl: userDataUrl, userWebId, opponentWebId: oppWebId, name: gameName, startPosition});
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
@@ -280,8 +279,6 @@ $('#join-game-btn').click(() => {
     while (i < joinGames.length && joinGames[i].gameUrl !== gameUrl) {
         i ++;
     }
-
-    dataSync.deleteFileForUser(joinGames[i].fileUrl);
 
     afterGameSpecificOptions();
     JoinExistingChessGame(gameUrl);
