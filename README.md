@@ -18,6 +18,7 @@ WARNING: The "Clear inbox" button **removes all files with (chess) game data** i
 - [Linked Data](https://en.wikipedia.org/wiki/Linked_data): to represent/share the details of the games
 - [Decentralization](https://en.wikipedia.org/wiki/Decentralization#Information_technology): information is fetched from different servers
 - [Solid PODs](https://solid.inrupt.com/get-a-solid-pod): store personal data about the games
+- [LDflex for Solid](https://github.com/solid/query-ldflex): simple access to data in Solid pods through LDflex expressions
 - [SPARQL](https://www.w3.org/TR/2013/REC-sparql11-overview-20130321/): query/update games
 - [RDF](https://www.w3.org/TR/rdf11-concepts/): representation of the data
 - [Comunica](https://github.com/comunica/): querying different data sources
