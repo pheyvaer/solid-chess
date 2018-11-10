@@ -264,7 +264,7 @@ $('#join-btn').click(async () => {
       $('#no-join').removeClass('hidden');
     }
   } else {
-    $('#login-required').show('hide');
+    $('#login-required').modal('show');
   }
 });
 
