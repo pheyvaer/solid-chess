@@ -156,11 +156,7 @@ async function setUpBoard(semanticGame) {
   board = ChessBoard('board', cfg);
   const oppName = await Utils.getFormattedName(oppWebId);
 
-  if (oppName) {
-    $('#opponent-name').text(oppName);
-  } else {
-    $('#opponent-name').text(oppWebId);
-  }
+  $('#opponent-name').text(oppName);
 
   if (semanticGame.getName()) {
     $('#name-of-the-game').text(semanticGame.getName());
@@ -219,10 +215,6 @@ $('#new-btn').click(async () => {
 
     for await (const friend of data[userWebId].friends) {
         let name = await Utils.getFormattedName(friend.value);
-
-        if (!name) {
-            name = friend;
-        }
 
         $select.append(`<option value="${friend}">${name}</option>`);
     }
@@ -321,7 +313,11 @@ $('#continue-btn').click(async () => {
           name = name.value;
         }
 
-        $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
+        const loader = new Loader();
+        const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
+        const oppName = await Utils.getFormattedName(oppWebId);
+
+        $select.append($(`<option value="${game.gameUrl}">${name} (${oppName})</option>`));
       });
     } else {
       $('#no-continue').removeClass('hidden');
