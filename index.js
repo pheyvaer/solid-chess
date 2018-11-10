@@ -154,7 +154,7 @@ async function setUpBoard(semanticGame) {
   };
 
   board = ChessBoard('board', cfg);
-  const oppName = await getFormattedName(oppWebId);
+  const oppName = await Utils.getFormattedName(oppWebId);
 
   if (oppName) {
     $('#opponent-name').text(oppName);
@@ -180,7 +180,7 @@ auth.trackSession(async session => {
     $('#login-required').modal('hide');
 
     userWebId = session.webId;
-    const name = await getFormattedName(userWebId);
+    const name = await Utils.getFormattedName(userWebId);
 
     if (name) {
       $('#user-name').removeClass('hidden');
@@ -215,19 +215,17 @@ $('#new-btn').click(async () => {
     $('#new-game-options').removeClass('hidden');
     $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
 
-    const friendIds = await Utils.getFriendsWebIds(userWebId);
-    console.log((await data[userWebId].friends).length);
     const $select = $('#possible-opps');
 
-    friendIds.forEach(async id => {
-      let name = await getFormattedName(id);
+    for await (const friend of data[userWebId].friends) {
+        let name = await Utils.getFormattedName(friend.value);
 
-      if (!name) {
-        name = id;
-      }
+        if (!name) {
+            name = friend;
+        }
 
-      $select.append(`<option value="${id}">${name}</option>`);
-    });
+        $select.append(`<option value="${friend}">${name}</option>`);
+    }
   } else {
     $('#login-required').modal('show');
   }
@@ -315,10 +313,12 @@ $('#continue-btn').click(async () => {
       $('#continue-form').removeClass('hidden');
 
       games.forEach(async game => {
-        let name = await Utils.getGameName(game.gameUrl);
+        let name = await data[game.gameUrl]['http://schema.org/name'];
 
         if (!name) {
           name = game.gameUrl;
+        } else {
+          name = name.value;
         }
 
         $select.append($(`<option value="${game.gameUrl}">${name}</option>`));
@@ -445,8 +445,13 @@ async function findGamesToJoin() {
 
     if (result) {
       result.fileUrl = fileurl;
-      result.name = await Utils.getGameName(result.gameUrl);
-      result.opponentsName = await getFormattedName(result.opponentWebId);
+      result.name = await data[result.gameUrl]['http://schema.org/name'];
+
+      if (name) {
+          result.name = result.name.value;
+      }
+
+      result.opponentsName = await Utils.getFormattedName(result.opponentWebId);
       results.push(result);
     }
 
@@ -520,30 +525,4 @@ function getNewGamePosition() {
   } else {
     return null;
   }
-}
-
-async function getFormattedName(webid) {
-  let formattedName = await data[webid].name;
-
-  if (!formattedName) {
-    formattedName = null;
-    const firstname = await data[webid].givenName;
-    const lastname = await data[webid].familyName;
-
-    if (firstname) {
-      formattedName = firstname;
-    }
-
-    if (lastname) {
-      if (formattedName) {
-        formattedName += ' ';
-      } else {
-        formattedName = '';
-      }
-
-      formattedName += lastname;
-    }
-  }
-
-  return formattedName;
 }
