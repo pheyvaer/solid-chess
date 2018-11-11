@@ -51,3 +51,8 @@ a {
 .hidden {
   display: none!important;
 }
+
+#board {
+  width: 95vw;
+  max-width: 500px;
+}
