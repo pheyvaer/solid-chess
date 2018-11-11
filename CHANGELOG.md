@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - fix duplicate ids in HTML
 - add option to switch between themes (pieces and board)
 - add "modern" theme
+- make board responsive
 
 ## [0.0.4] - 2018-11-10
 
