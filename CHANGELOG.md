@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - new game data that is saved to an existing file does not overwrite other game data
 - make sure that new game url is unused
 - catch error when notification is invalid RDF
+- fix duplicate ids in HTML
+- add option to switch between themes (pieces and board)
+- add "modern" theme
 
 ## [0.0.4] - 2018-11-10
 

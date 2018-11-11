@@ -10,7 +10,7 @@ a {
   text-decoration: underline;
 }
 
-#login-required {
+#login-required, #theme-selector {
   color: black;
 }
 

@@ -15,9 +15,29 @@ let oppWebId;
 let joinGames = [];
 let gameName;
 let refreshIntervalId;
+let selectedTheme = 'default';
+
 const fullColor = {
   'w': 'white',
   'b': 'black'
+};
+const possibleThemes = {
+  default: {
+    name: 'Classic',
+    pieceTheme: 'img/chesspieces/wikipedia/{piece}.png',
+    color: {
+      black: '#b58863',
+      white: '#f0d9b5'
+    }
+  },
+  modern: {
+    name: 'Modern',
+    pieceTheme: 'img/chesspieces/freevector/{piece}.png',
+    color: {
+      black: 'deepskyblue',
+      white: 'lightskyblue'
+    }
+  }
 };
 
 $('.login-btn').click(() => {
@@ -29,6 +49,40 @@ $('#logout-btn').click(() => {
 });
 
 $('#refresh-btn').click(refresh);
+
+$('#theme-btn').click(() => {
+  const $modalBody = $('#theme-selector .modal-body');
+  $modalBody.empty();
+
+  const keys = Object.keys(possibleThemes);
+
+  keys.forEach(k => {
+    const theme = possibleThemes[k];
+
+    const $radio = `<div class="form-check">
+                <input type="radio" class="form-check-input" name="theme" id="${k}-theme" value="${k}" ${k === selectedTheme ? 'checked' : ''}>
+                <label class="form-check-label" for="${k}-theme">${theme.name}</label>
+              </div>`;
+
+    $modalBody.append($radio);
+  });
+
+  $('#theme-selector').modal('show');
+});
+
+$('#save-theme-btn').click(() => {
+  const newTheme = $('input[name="theme"]:checked').val();
+
+  if (newTheme !== selectedTheme) {
+    selectedTheme = newTheme;
+
+    if (semanticGame) {
+      setUpBoard(semanticGame);
+    }
+  }
+
+  $('#theme-selector').modal('hide');
+});
 
 async function setUpForEveryGameOption() {
   $('#game').removeClass('hidden');
@@ -132,10 +186,15 @@ async function setUpBoard(semanticGame) {
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
     position: game.fen(),
-    orientation: fullColor[semanticGame.getUserColor()]
+    orientation: fullColor[semanticGame.getUserColor()],
+    pieceTheme: possibleThemes[selectedTheme].pieceTheme
   };
 
   board = ChessBoard('board', cfg);
+
+  $('.black-3c85d').css('background-color', possibleThemes[selectedTheme].color.black);
+  $('.white-1e1d7').css('background-color', possibleThemes[selectedTheme].color.white);
+
   const oppName = await Utils.getFormattedName(oppWebId);
 
   $('#opponent-name').text(oppName);

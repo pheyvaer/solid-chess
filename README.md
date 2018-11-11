@@ -33,5 +33,9 @@ You can run the game locally by doing the following:
 - `npm run build`: bundle the JavaScript via Webpack. The result can be found in `dist/main.js`.
 - Serve the contents of the folder, e.g., via `http-server`.
 
+## Credits
+
+[Freevector Chess Pieces Set](https://www.freevector.com/chess-pieces-set) ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), no changes were made)
+
 ## License
 © 2018 [Pieter Heyvaert](https://pieterheyvaert.com), [MIT License](https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md)
