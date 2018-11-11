@@ -49,7 +49,7 @@
               <input type="text" class="form-control rounded-0" id="game-name" placeholder="Enter the game's name">
             </div>
             <div class="form-group">
-              <label for="possible-op">Your opponent</label>
+              <label for="possible-opps">Your opponent</label>
               <!-- <input type="text" class="form-control rounded-0" id="opp-webid" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me"> -->
               <select id="possible-opps"></select>
             </div>
@@ -81,13 +81,13 @@
           </div>
           <form id="join-form" class="hidden">
             <div class="form-group">
-              <label for="opp-webid">Game you want to join</label>
+              <label for="game-urls">Game you want to join</label>
               <select id="game-urls"></select>
             </div>
             <div class="form-group">
               <label for="join-data-url">Path on your POD to store the game</label>
-              <input type="text" class="form-control rounded-0" id="join-data-url" aria-describedby="pathHelp" placeholder="Enter path">
-              <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. Data will be appended if the file exists.</small>
+              <input type="text" class="form-control rounded-0" id="join-data-url" aria-describedby="pathHelp2" placeholder="Enter path">
+              <small id="pathHelp2" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. Data will be appended if the file exists.</small>
             </div>
             <button id="join-game-btn" type="button" class="btn btn-dark">Join!</button>
             <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
