@@ -1,6 +1,6 @@
 {
   "name": "solid-chess",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A Solid sample chess app",
   "main": "index.js",
   "scripts": {
