@@ -9,6 +9,8 @@ Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screen
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
 
+If you want to know more about how the application interacts with different Solid PODs, you can read [this](./interaction-with-pods.md).
+
 ## What you can do
 - Create a new game, which will send a request to join to your opponent.
 - Join a game

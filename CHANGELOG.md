@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - add option to switch between themes (pieces and board)
 - add "modern" theme
 - make board responsive
+- add document that discusses the interaction between Solid Chess and the different PODs
 
 ## [0.0.4] - 2018-11-10
 
