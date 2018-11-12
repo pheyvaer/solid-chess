@@ -4,11 +4,14 @@ actor Player A
 participant Solid Chess [A]
 database POD A
 
-Solid Chess [A]->POD A:1.1 GET: WebId
-POD A-->>Solid Chess [A]: 1.2 RDF
+autonumber 1
+Solid Chess [A]->POD A:GET: WebId
+POD A-->>Solid Chess [A]: RDF
 
 note over Solid Chess [A]: determine friends\nof Player A
 
-Player A->Solid Chess [A]: 1.4 select friend
+Player A->Solid Chess [A]: select friend
 
-Solid Chess [A]->POD A: 1.5 PUT: game data (RDF)
+Solid Chess [A]->POD A: PUT: game data (RDF)
+
+# made with sequencediagram.org
