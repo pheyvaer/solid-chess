@@ -264,17 +264,19 @@ $('#new-btn').click(async () => {
   }
 });
 
-$('#start-new-game-btn').click(() => {
-  $('#new-game-options').addClass('hidden');
+$('#start-new-game-btn').click(async () => {
+  const dataUrl = $('#data-url').val();
 
-  if ($('#data-url').val() !== userWebId) {
+  if (await Utils.writePermission(dataUrl, dataSync)) {
+    $('#new-game-options').addClass('hidden');
     oppWebId = $('#possible-opps').val();
-    userDataUrl = $('#data-url').val();
+    userDataUrl = dataUrl;
     gameName = $('#game-name').val();
     afterGameSpecificOptions();
     setUpNewChessGame();
   } else {
-    console.warn('We are pretty sure you do not want remove your WebID.');
+    $('#write-permission-url').text(dataUrl);
+    $('#write-permission').modal('show');
   }
 });
 
