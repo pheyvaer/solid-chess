@@ -1,0 +1,22 @@
+title 4. Do move
+
+actor Player A
+participant Solid Chess [A]
+database POD A
+database POD B
+participant Solid Chess [B]
+
+Player A ->Solid Chess [A]: 4.1 do move
+Solid Chess [A] -> POD A: 4.2 PATCH: move
+Solid Chess [A] ->POD B: 4.3 POST: "new move" (RDF) to inbox
+
+Solid Chess [B]->POD B: 4.4 GET: inbox
+POD B-->>Solid Chess [B]: 4.5 RDF
+
+loop all notifications
+	opt new move
+    	Solid Chess [B]->POD A:4.6 GET: move
+        POD A-->>Solid Chess [B]: 4.7 RDF
+        note over Solid Chess [B]: update chessboard (GUI)
+    end
+end

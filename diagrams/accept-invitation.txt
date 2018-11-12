@@ -1,0 +1,27 @@
+title 3. Accept invitation
+
+actor Player B
+participant Solid Chess [B]
+database POD B
+database POD A
+
+Solid Chess [B]->POD B:3.1 GET: WebId
+POD B-->>Solid Chess [B]: 3.2 RDF
+note over Solid Chess [B]: determine inbox url\nof player B
+Solid Chess [B]->POD B: 3.3 GET: inbox
+POD B-->>Solid Chess [B]: 3.4 RDF
+
+loop all notifications
+	opt invitation
+    	Solid Chess [B]->POD A:3.5 GET: game
+        POD A-->>Solid Chess [B]: 3.6 RDF
+        note over Solid Chess [B]: show invitation (GUI)
+    end
+end
+
+Player B->Solid Chess [B]:3.7 Accept invitation
+Solid Chess [B]->POD B: 3.8 PUT: game data (RDF)
+Solid Chess [B]->POD A: 3.9 GET: WebId
+POD A-->>Solid Chess [B]: 3.10 RDF
+note over Solid Chess [B]: determine inbox url\nof player A
+Solid Chess [B]->POD A: 3.11 POST: acceptance (RDF) to inbox
