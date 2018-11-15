@@ -10,7 +10,7 @@ a {
   text-decoration: underline;
 }
 
-#login-required, #theme-selector, #write-permission {
+#login-required, #theme-selector, #write-permission, #invitation-response {
   color: black;
 }
 

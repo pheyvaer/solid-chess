@@ -48,7 +48,7 @@ $('#logout-btn').click(() => {
   auth.logout();
 });
 
-$('#refresh-btn').click(refresh);
+$('#refresh-btn').click(checkForNotifications);
 
 $('#theme-btn').click(() => {
   const $modalBody = $('#theme-selector .modal-body');
@@ -95,8 +95,7 @@ function setUpForEveryGameOption() {
  * This method does the preparations after every game option has been set up.
  */
 function setUpAfterEveryGameOptionIsSetUp() {
-  // refresh every 5sec
-  refreshIntervalId = setInterval(refresh, 5000);
+
 }
 
 /**
@@ -469,13 +468,14 @@ function updateStatus() {
  * The necessarily data is stored and the UI is updated.
  * @returns {Promise<void>}
  */
-async function refresh() {
+async function checkForNotifications() {
   console.log('refresh started');
 
-  if (semanticGame.isOpponentsTurn()) {
-    const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId));
+  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId));
 
-    updates.forEach(async (fileurl) => {
+  updates.forEach(async (fileurl) => {
+    // check for new moves
+    if (semanticGame && semanticGame.isOpponentsTurn()) {
       const lastMoveUrl = semanticGame.getLastMove();
       let nextMoveUrl;
       let endsGame = false;
@@ -494,8 +494,8 @@ async function refresh() {
 
         if (lastMoveUrl) {
           let update = `INSERT DATA {
-            <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
-          `;
+          <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
+        `;
 
           if (endsGame) {
             update += `<${semanticGame.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
@@ -506,8 +506,8 @@ async function refresh() {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
         } else {
           dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-            <${semanticGame.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
-          }`);
+          <${semanticGame.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
+        }`);
         }
 
         let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
@@ -529,8 +529,49 @@ async function refresh() {
           console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
         }
       }
-    });
-  }
+    }
+
+    // check for acceptances of invitations
+    const response = await Utils.getResponseToInvitation(fileurl);
+
+    if (response) {
+      const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
+      const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
+      let gameName = await data[gameUrl.value].schema_name;
+
+      if (!gameName) {
+        gameName = gameUrl;
+      } else {
+        gameName = gameName.value;
+      }
+
+      let text;
+
+      if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
+        text = `Your opponent accepted your invitation to join "${gameName}"!`;
+      } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
+        text = `Your opponent refused your invitation to join ${gameName}...`;
+      }
+
+      if (!$('#invitation-response').is(':visible')) {
+        $('#invitation-response .modal-body').empty();
+      }
+
+      if ($('#invitation-response .modal-body').text() !== '') {
+       $('#invitation-response .modal-body').append('<br/>');
+      }
+
+       $('#invitation-response .modal-body').append(text);
+       $('#invitation-response').modal('show');
+
+      //show response in UI
+
+
+      // store response in POD
+      console.log(response);
+      dataSync.deleteFileForUser(fileurl);
+    }
+  });
 }
 
 $('#clear-inbox-btn').click(async () => {
@@ -550,10 +591,10 @@ $('#stop-playing').click(() => {
   semanticGame = null;
   board = null;
 
-  if (refreshIntervalId) {
-    clearInterval(refreshIntervalId);
-    refreshIntervalId = null;
-  }
+  // if (refreshIntervalId) {
+  //   clearInterval(refreshIntervalId);
+  //   refreshIntervalId = null;
+  // }
 });
 
 $('#custom-position-chk').change(() => {
@@ -587,3 +628,6 @@ function getNewGamePosition() {
     return null;
   }
 }
+
+// refresh every 5sec
+refreshIntervalId = setInterval(checkForNotifications, 5000);
