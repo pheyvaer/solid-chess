@@ -545,18 +545,31 @@ async function checkForNotifications() {
   });
 }
 
-async function processGameToJoin(result, fileurl) {
-  result.fileUrl = fileurl;
-  result.name = await data[result.gameUrl]['http://schema.org/name'];
+/**
+ * This method processes a notification that contains an invitation to join a game.
+ * The resulting game is added to gamesToJoin (arra).
+ * @param game: the object representing the relevant game information.
+ * @param fileurl: the url of the file containing the notification.
+ * @returns {Promise<void>}
+ */
+async function processGameToJoin(game, fileurl) {
+  game.fileUrl = fileurl;
+  game.name = await data[game.gameUrl]['http://schema.org/name'];
 
-  if (result.name) {
-    result.name = result.name.value;
+  if (game.name) {
+    game.name = game.name.value;
   }
 
-  result.opponentsName = await Utils.getFormattedName(result.opponentWebId);
-  gamesToJoin.push(result);
+  game.opponentsName = await Utils.getFormattedName(game.opponentWebId);
+  gamesToJoin.push(game);
 }
 
+/**
+ * This method processes a response to an invitation to join a game.
+ * @param response: the object representing the response.
+ * @param fileurl: the url of the file containing the notification.
+ * @returns {Promise<void>}
+ */
 async function processResponseInNotification(response, fileurl) {
   const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
   const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - use [schema:InviteAction](http://schema.org/InviteAction) to represent an invitation to join a chess game
 - use [schema:contributor](http://schema.org/contributor) to add the games of user to his WebId
 - send acceptance of invitation when joining a game
+- show modal when response to invitation is received
 
 ### Fixed
 
