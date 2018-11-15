@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - configure JSDoc: documentation is available in `docs`
 - use [schema:InviteAction](http://schema.org/InviteAction) to represent an invitation to join a chess game
 - use [schema:contributor](http://schema.org/contributor) to add the games of user to his WebId
+- send acceptance of invitation when joining a game
 
 ### Fixed
 
@@ -60,6 +61,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - use [semantic-chess](https://github.com/pheyvaer/semantic-chess-js), which replaces the local semantic chess code
 
+[0.0.7]: https://github.com/pheyvaer/solid-chess/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/pheyvaer/solid-chess/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/pheyvaer/solid-chess/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/pheyvaer/solid-chess/compare/v0.0.3...v0.0.4
