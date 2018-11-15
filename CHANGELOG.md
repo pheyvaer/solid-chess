@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - add documentation in the code
 - configure JSDoc: documentation is available in `docs`
 - use [schema:InviteAction](http://schema.org/InviteAction) to represent an invitation to join a chess game
+- use [schema:contributor](http://schema.org/contributor) to add the games of user to his WebId
 
 ### Fixed
 

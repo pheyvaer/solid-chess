@@ -112,7 +112,7 @@ async function setUpNewChessGame() {
   const invitation =  await Utils.generateInvitation(userDataUrl, semanticGame.getUrl(), userWebId, oppWebId);
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${gameUrl}> <${namespaces.schema}contributor> <${userWebId}>; <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${invitation.sparqlUpdate}}`);
   dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), invitation.notification);
 
