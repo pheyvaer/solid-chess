@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Home - Documentation</title>
+    <title>datasync.js - Documentation</title>
 
     <script src="scripts/prettify/prettify.js"></script>
     <script src="scripts/prettify/lang-css.js"></script>
@@ -29,60 +29,172 @@
 
 <div id="main">
     
+    <h1 class="page-title">datasync.js</h1>
+    
 
     
 
 
 
     
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const auth = require('solid-auth-client');
+const URI = require('uri-js');
+const newEngine = require('@comunica/actor-init-sparql-rdfjs').newEngine;
+const Q = require('q');
+const Utils = require('./utils');
 
+/**
+ * A class with helper methods for read and write of Solid PODs.
+ */
+class DataSync {
 
+  constructor() {
+    this.engine = newEngine();
+    this.alreadyCheckedResources = [];
 
+    //this._setUpListeningForChangesOfInbox();
+  }
 
+  /**
+   * This method creates an empty file for the given url. It overwrites existing files.
+   * @param url: the url of the empty file
+   * @returns {Promise}: the promise from auth.fetch().
+   */
+  createEmptyFileForUser(url) {
+    return auth.fetch(url, {
+      method: 'PUT',
+      body: ''
+    });
+  }
 
+  /**
+   * This method deletes a file.
+   * @param url: the url of the file that needs to be deleted.
+   * @returns {Promise}: the promise from auth.fetch().
+   */
+  deleteFileForUser(url) {
+    return auth.fetch(url, {
+      method: 'DELETE'
+    });
+  }
 
+  /**
+   * This method executes an SPARQL update on a file.
+   * @param url: the url of the file that needs to be updated.
+   * @param query: the SPARQL update query that needs to be executed.
+   * @returns {Promise}: the promise from auth.fetch().
+   */
+  executeSPARQLUpdateForUser(url, query) {
+    return auth.fetch(url, {
+      method: 'PATCH',
+      body: query,
+      headers: {
+        'Content-Type': 'application/sparql-update'
+      }
+    });
+  }
 
+  /**
+   * This method sends a notification to an inbox.
+   * @param url: the url of the inbox.
+   * @param data: the RDF data representing the notification.
+   * @returns {Promise}: the promise from auth.fetch().
+   */
+  sendToOpponentsInbox(url, data) {
+    return auth.fetch(url, {
+      method: 'POST',
+      body: data
+    });
+  }
 
+  /**
+   * This method check an inbox for new notifications.
+   * @param inboxUrl: the url of the inbox.
+   * @returns {Promise}: a promise that resolves with an array containing the urls of all new notifications since the last time
+   * this method was called.
+   */
+  async checkUserInboxForUpdates(inboxUrl) {
+    const deferred = Q.defer();
+    const newResources = [];
+    const rdfjsSource = await Utils.getRDFjsSourceFromUrl(inboxUrl);
+    const self = this;
 
-    
+    this.engine.query(`SELECT ?resource {
+      ?resource a &lt;http://www.w3.org/ns/ldp#Resource>.
+    }`,
+      { sources: [ { type: 'rdfjsSource', value: rdfjsSource } ] })
+      .then(function (result) {
+        result.bindingsStream.on('data', data => {
+          data = data.toObject();
 
+          const resource = data['?resource'].value;
 
-    <section class="readme">
-        <article><h1>Solid Chess</h1><p>This is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/">Solid</a>.
-No central sever is required to run or set up a game.
-All personal data about the game is stored on your POD.
-Requests to join and updates of a game are sent to the inbox of your opponent directly.</p>
-<p>Check the <a href="https://pheyvaer.github.io/solid-chess/">live version</a> or the <a href="https://streamable.com/tf8yv">screencast</a>.</p>
-<p>WARNING: The &quot;Clear inbox&quot; button <strong>removes all files with (chess) game data</strong> in your inbox! So be careful!</p>
-<p>If you want to know more about how the application interacts with different Solid PODs, you can read <a href="./interaction-with-pods.md">this</a>.</p>
-<h2>What you can do</h2><ul>
-<li>Create a new game, which will send a request to join to your opponent.</li>
-<li>Join a game</li>
-<li>Continue a game you started earlier</li>
-</ul>
-<h2>Used technologies/concepts/libraries</h2><ul>
-<li><a href="https://en.wikipedia.org/wiki/Linked_data">Linked Data</a>: to represent/share the details of the games</li>
-<li><a href="https://en.wikipedia.org/wiki/Decentralization#Information_technology">Decentralization</a>: information is fetched from different servers</li>
-<li><a href="https://solid.inrupt.com/get-a-solid-pod">Solid PODs</a>: store personal data about the games</li>
-<li><a href="https://github.com/solid/query-ldflex">LDflex for Solid</a>: simple access to data in Solid pods through LDflex expressions</li>
-<li><a href="https://www.w3.org/TR/2013/REC-sparql11-overview-20130321/">SPARQL</a>: query/update games</li>
-<li><a href="https://www.w3.org/TR/rdf11-concepts/">RDF</a>: representation of the data</li>
-<li><a href="https://github.com/comunica/">Comunica</a>: querying different data sources</li>
-<li><a href="https://github.com/jhlywa/chess.js">chess.js</a>: chess engine</li>
-<li><a href="https://github.com/oakmac/chessboardjs/">chessboard.js</a>: chessboard</li>
-</ul>
-<h2>Install</h2><p>You can run the game locally by doing the following:</p>
-<ul>
-<li>Clone this repo.</li>
-<li><code>npm i</code>: install Node.js dependencies.</li>
-<li><code>npm run build</code>: bundle the JavaScript via Webpack. The result can be found in <code>dist/main.js</code>.</li>
-<li>Serve the contents of the folder, e.g., via <code>http-server</code>.</li>
-</ul>
-<h2>Credits</h2><p><a href="https://www.freevector.com/chess-pieces-set">Freevector Chess Pieces Set</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, no changes were made)</p>
-<h2>License</h2><p>© 2018 <a href="https://pieterheyvaert.com">Pieter Heyvaert</a>, <a href="https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md">MIT License</a></p></article>
+          if (self.alreadyCheckedResources.indexOf(resource) === -1) {
+            newResources.push(resource);
+            self.alreadyCheckedResources.push(resource);
+          }
+        });
+
+        result.bindingsStream.on('end', function () {
+          deferred.resolve(newResources);
+        });
+      });
+
+    return deferred.promise;
+  }
+
+  /**
+   * This method returns all resources in an inbox.
+   * @param inboxUrl: the url of the inbox.
+   * @returns {Promise}: a promise that resolves with an array with all urls of the resources in the inbox.
+   */
+  async getAllResourcesInInbox(inboxUrl) {
+    const deferred = Q.defer();
+    const resources = [];
+    const rdfjsSource = await Utils.getRDFjsSourceFromUrl(inboxUrl);
+
+    this.engine.query(`SELECT ?resource {
+      ?resource a &lt;http://www.w3.org/ns/ldp#Resource>.
+    }`,
+      { sources: [ { type: 'rdfjsSource', value: rdfjsSource } ] })
+      .then(function (result) {
+        result.bindingsStream.on('data', data => {
+          data = data.toObject();
+
+          const resource = data['?resource'].value;
+          resources.push(resource);
+        });
+
+        result.bindingsStream.on('end', function () {
+          deferred.resolve(resources);
+        });
+      });
+
+    return deferred.promise;
+  }
+
+  _setUpListeningForChangesOfInbox() {
+    const hostname = URI.parse(this.userInboxUrl).host;
+    const socket = new WebSocket(`wss://${hostname}/`);
+
+    socket.onopen = function() {
+    	this.send(`sub ${this.userInboxUrl}`);
+    };
+
+    socket.onmessage = function(msg) {
+    	if (msg.data &amp;&amp; msg.data.slice(0, 3) === 'pub') {
+        console.log(msg);
+    	}
+    };
+  }
+}
+
+module.exports = DataSync;
+</code></pre>
+        </article>
     </section>
-
-
 
 
 
