@@ -123,23 +123,34 @@ async function setUpNewChessGame() {
 /**
  * This method joins the player with a game.
  * @param gameUrl: the url of the game to join.
+ * @param invitationUrl: the url of the invitation that we accept.
+ * @param opponentWebId: the WebId of the opponent of the game, sender of the invitation.
  * @returns {Promise<void>}
  */
-async function joinExistingChessGame(gameUrl) {
+async function joinExistingChessGame(gameUrl, invitationUrl, opponentWebId) {
   setUpForEveryGameOption();
   const loader = new Loader();
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
-  oppWebId = semanticGame.getOpponentWebId();
+  oppWebId = opponentWebId;
 
-  await dataSync.createEmptyFileForUser(userDataUrl);
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+  if (await Utils.writePermission(userDataUrl, dataSync)) {
+    const response = await Utils.generateResponseToInvitation(userDataUrl, invitationUrl, userWebId, oppWebId, "yes");
+
+    dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
     <${gameUrl}> a <${namespaces.chess}ChessGame>;
       <${namespaces.storage}storeIn> <${userDataUrl}>.
-  }`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
+      
+      ${response.sparqlUpdate}
+    }`);
+    dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
+    dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(opponentWebId), response.notification);
 
-  setUpBoard(semanticGame);
-  setUpAfterEveryGameOptionIsSetUp();
+    setUpBoard(semanticGame);
+    setUpAfterEveryGameOptionIsSetUp();
+  } else {
+    $('#write-permission-url').text(userDataUrl);
+    $('#write-permission').modal('show');
+  }
 }
 
 /**
@@ -354,8 +365,10 @@ $('#join-game-btn').click(() => {
         i ++;
     }
 
+    const game = joinGames[i];
+
     afterGameSpecificOptions();
-    joinExistingChessGame(gameUrl);
+    joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
   } else {
     console.warn('We are pretty sure you do not want to remove your WebID.');
   }
