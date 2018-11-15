@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Home - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#fileContainsChessInfo">fileContainsChessInfo</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#findGamesToJoin">findGamesToJoin</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getFirstHalfMove">getFirstHalfMove</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getFormattedName">getFormattedName</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getGamesToContinue">getGamesToContinue</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getGameUrl">getGameUrl</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getInboxUrl">getInboxUrl</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getJoinRequest">getJoinRequest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getNextHalfMove">getNextHalfMove</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#getRDFjsSourceFromUrl">getRDFjsSourceFromUrl</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#namespaces">namespaces</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#writePermission">writePermission</a></span></li>
+</nav>
+
+<div id="main">
+    
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+    <section class="readme">
+        <article><h1>Solid Chess</h1><p>This is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/">Solid</a>.
+No central sever is required to run or set up a game.
+All personal data about the game is stored on your POD.
+Requests to join and updates of a game are sent to the inbox of your opponent directly.</p>
+<p>Check the <a href="https://pheyvaer.github.io/solid-chess/">live version</a> or the <a href="https://streamable.com/tf8yv">screencast</a>.</p>
+<p>WARNING: The &quot;Clear inbox&quot; button <strong>removes all files with (chess) game data</strong> in your inbox! So be careful!</p>
+<p>If you want to know more about how the application interacts with different Solid PODs, you can read <a href="./interaction-with-pods.md">this</a>.</p>
+<h2>What you can do</h2><ul>
+<li>Create a new game, which will send a request to join to your opponent.</li>
+<li>Join a game</li>
+<li>Continue a game you started earlier</li>
+</ul>
+<h2>Used technologies/concepts/libraries</h2><ul>
+<li><a href="https://en.wikipedia.org/wiki/Linked_data">Linked Data</a>: to represent/share the details of the games</li>
+<li><a href="https://en.wikipedia.org/wiki/Decentralization#Information_technology">Decentralization</a>: information is fetched from different servers</li>
+<li><a href="https://solid.inrupt.com/get-a-solid-pod">Solid PODs</a>: store personal data about the games</li>
+<li><a href="https://github.com/solid/query-ldflex">LDflex for Solid</a>: simple access to data in Solid pods through LDflex expressions</li>
+<li><a href="https://www.w3.org/TR/2013/REC-sparql11-overview-20130321/">SPARQL</a>: query/update games</li>
+<li><a href="https://www.w3.org/TR/rdf11-concepts/">RDF</a>: representation of the data</li>
+<li><a href="https://github.com/comunica/">Comunica</a>: querying different data sources</li>
+<li><a href="https://github.com/jhlywa/chess.js">chess.js</a>: chess engine</li>
+<li><a href="https://github.com/oakmac/chessboardjs/">chessboard.js</a>: chessboard</li>
+</ul>
+<h2>Install</h2><p>You can run the game locally by doing the following:</p>
+<ul>
+<li>Clone this repo.</li>
+<li><code>npm i</code>: install Node.js dependencies.</li>
+<li><code>npm run build</code>: bundle the JavaScript via Webpack. The result can be found in <code>dist/main.js</code>.</li>
+<li>Serve the contents of the folder, e.g., via <code>http-server</code>.</li>
+</ul>
+<h2>Credits</h2><p><a href="https://www.freevector.com/chess-pieces-set">Freevector Chess Pieces Set</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, no changes were made)</p>
+<h2>License</h2><p>© 2018 <a href="https://pieterheyvaert.com">Pieter Heyvaert</a>, <a href="https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md">MIT License</a></p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Nov 15 2018 10:25:50 GMT+0100 (CET) using the Minami theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>

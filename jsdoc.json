@@ -1,0 +1,11 @@
+{
+  "opts": {
+    "encoding": "utf8",
+    "destination": "./docs/",
+    "template": "node_modules/minami",
+    "readme": "./README.md"
+  },
+  "source": {
+    "includePattern": ".+\\.js(doc|x)?$"
+  }
+}
