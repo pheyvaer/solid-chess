@@ -84,15 +84,25 @@ $('#save-theme-btn').click(() => {
   $('#theme-selector').modal('hide');
 });
 
-async function setUpForEveryGameOption() {
+/**
+ * This method does the necessary updates of the UI when the different game options are shown.
+ */
+function setUpForEveryGameOption() {
   $('#game').removeClass('hidden');
 }
 
+/**
+ * This method does the preparations after every game option has been set up.
+ */
 function setUpAfterEveryGameOptionIsSetUp() {
   // refresh every 5sec
   refreshIntervalId = setInterval(refresh, 5000);
 }
 
+/**
+ * This method sets up a new chess game.
+ * @returns {Promise<void>}
+ */
 async function setUpNewChessGame() {
   setUpForEveryGameOption();
 
@@ -108,7 +118,12 @@ async function setUpNewChessGame() {
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function JoinExistingChessGame(gameUrl) {
+/**
+ * This method joins the player with a game.
+ * @param gameUrl: the url of the game to join.
+ * @returns {Promise<void>}
+ */
+async function joinExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
   const loader = new Loader();
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
@@ -125,7 +140,12 @@ async function JoinExistingChessGame(gameUrl) {
   setUpAfterEveryGameOptionIsSetUp();
 }
 
-async function ContinueExistingChessGame(gameUrl) {
+/**
+ * This method lets a player continue an existing chess game.
+ * @param gameUrl: the url of the game to continue.
+ * @returns {Promise<void>}
+ */
+async function continueExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
   const loader = new Loader();
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
@@ -135,6 +155,11 @@ async function ContinueExistingChessGame(gameUrl) {
   setUpAfterEveryGameOptionIsSetUp();
 }
 
+/**
+ * This method sets up the chessboard.
+ * @param semanticGame: the Semantic Game which drives the board.
+ * @returns {Promise<void>}
+ */
 async function setUpBoard(semanticGame) {
   const game = semanticGame.getChess();
 
@@ -238,6 +263,9 @@ auth.trackSession(async session => {
   }
 });
 
+/**
+ * This method updates the UI after a game option has been selected by the player.
+ */
 function afterGameOption() {
   $('#game-options').addClass('hidden');
   $('#how-it-works').addClass('hidden');
@@ -325,7 +353,7 @@ $('#join-game-btn').click(() => {
     }
 
     afterGameSpecificOptions();
-    JoinExistingChessGame(gameUrl);
+    joinExistingChessGame(gameUrl);
   } else {
     console.warn('We are pretty sure you do not want to remove your WebID.');
   }
@@ -381,9 +409,12 @@ $('#continue-game-btn').click(async () => {
   userDataUrl = games[i].storeUrl;
 
   afterGameSpecificOptions();
-  ContinueExistingChessGame(selectedGame);
+  continueExistingChessGame(selectedGame);
 });
 
+/**
+ * This method updates the status of the game in the UI.
+ */
 function updateStatus() {
   var statusEl = $('#status');
   var status = '';
@@ -418,6 +449,11 @@ function updateStatus() {
 }
 
 
+/**
+ * This method checks if a new move has been made by the opponent.
+ * The necessarily data is stored and the UI is updated.
+ * @returns {Promise<void>}
+ */
 async function refresh() {
   console.log('refresh started');
 
@@ -511,6 +547,10 @@ $('.btn-cancel').click(() => {
   $('#how-it-works').removeClass('hidden');
 });
 
+/**
+ * This method determines what the start position is of a new chess game based on the what the player selected in the UI.
+ * @returns {*}
+ */
 function getNewGamePosition() {
   if ($('#custom-position-chk').prop('checked')) {
     return $('#fen').val();
