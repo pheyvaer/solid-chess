@@ -107,12 +107,14 @@ async function setUpNewChessGame() {
   setUpForEveryGameOption();
 
   const startPosition = getNewGamePosition();
-  const gameUrl = await Utils.getGameUrl(userDataUrl);
+  const gameUrl = await Utils.generateUniqueUrlForResource(userDataUrl);
   semanticGame = new SemanticChess({url: gameUrl, moveBaseUrl: userDataUrl, userWebId, opponentWebId: oppWebId, name: gameName, startPosition});
+  const invitation =  await Utils.generateInvitation(userDataUrl, semanticGame.getUrl(), userWebId, oppWebId);
 
   dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
   dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
-  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), `<${userWebId}> <${namespaces.game}asksToJoin> <${semanticGame.getUrl()}>.`);
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${invitation.sparqlUpdate}}`);
+  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), invitation.notification);
 
   setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -190,7 +192,7 @@ async function setUpBoard(semanticGame) {
     // illegal move
     if (move === null) return 'snapback';
 
-    dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
+    const res = await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
     if (move.notification) {
       dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification);
@@ -495,10 +497,24 @@ async function refresh() {
           }`);
         }
 
-        const san = (await data[nextMoveUrl][namespaces.chess + 'hasSANRecord']).value;
-        semanticGame.loadMove(san, {url: nextMoveUrl});
-        board.position(semanticGame.getChess().fen());
-        updateStatus();
+        let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
+
+        //TODO check if there really is a bug in LDflex.
+        if (!san) {
+          san = await Utils.getSANRecord(nextMoveUrl);
+
+          if (san) {
+            console.warn('san: found by using Comunica directly, but not when using LDflex. Bug?');
+          }
+        }
+
+        if (san) {
+          semanticGame.loadMove(san.value, {url: nextMoveUrl});
+          board.position(semanticGame.getChess().fen());
+          updateStatus();
+        } else {
+          console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
+        }
       }
     });
   }
