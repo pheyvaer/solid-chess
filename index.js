@@ -12,7 +12,7 @@ let dataSync = new DataSync();
 let board;
 let userDataUrl;
 let oppWebId;
-let joinGames = [];
+let gamesToJoin = [];
 let gameName;
 let refreshIntervalId;
 let selectedTheme = 'default';
@@ -325,16 +325,14 @@ $('#join-btn').click(async () => {
     afterGameOption();
     $('#join-game-options').removeClass('hidden');
     $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
-
-    joinGames = await Utils.findGamesToJoin(userWebId, dataSync);
     $('#join-looking').addClass('hidden');
 
-    if (joinGames.length > 0) {
+    if (gamesToJoin.length > 0) {
       $('#join-loading').addClass('hidden');
       $('#join-form').removeClass('hidden');
       const $select = $('#game-urls');
 
-      joinGames.forEach(game => {
+      gamesToJoin.forEach(game => {
         let name = game.name;
 
         if (!name) {
@@ -360,11 +358,11 @@ $('#join-game-btn').click(() => {
 
     let i = 0;
 
-    while (i < joinGames.length && joinGames[i].gameUrl !== gameUrl) {
+    while (i < gamesToJoin.length && gamesToJoin[i].gameUrl !== gameUrl) {
         i ++;
     }
 
-    const game = joinGames[i];
+    const game = gamesToJoin[i];
 
     afterGameSpecificOptions();
     joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
@@ -535,43 +533,66 @@ async function checkForNotifications() {
     const response = await Utils.getResponseToInvitation(fileurl);
 
     if (response) {
-      const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
-      const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
-      let gameName = await data[gameUrl.value].schema_name;
+      processResponseInNotification(response, fileurl);
+    }
 
-      if (!gameName) {
-        gameName = gameUrl;
-      } else {
-        gameName = gameName.value;
-      }
+    // check for games to join
+    const gameToJoin = await Utils.getJoinRequest(fileurl, userWebId);
 
-      let text;
-
-      if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
-        text = `Your opponent accepted your invitation to join "${gameName}"!`;
-      } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
-        text = `Your opponent refused your invitation to join ${gameName}...`;
-      }
-
-      if (!$('#invitation-response').is(':visible')) {
-        $('#invitation-response .modal-body').empty();
-      }
-
-      if ($('#invitation-response .modal-body').text() !== '') {
-       $('#invitation-response .modal-body').append('<br/>');
-      }
-
-       $('#invitation-response .modal-body').append(text);
-       $('#invitation-response').modal('show');
-
-      //show response in UI
-
-
-      // store response in POD
-      console.log(response);
-      dataSync.deleteFileForUser(fileurl);
+    if (gameToJoin) {
+      processGameToJoin(gameToJoin, fileurl);
     }
   });
+}
+
+async function processGameToJoin(result, fileurl) {
+  result.fileUrl = fileurl;
+  result.name = await data[result.gameUrl]['http://schema.org/name'];
+
+  if (result.name) {
+    result.name = result.name.value;
+  }
+
+  result.opponentsName = await Utils.getFormattedName(result.opponentWebId);
+  gamesToJoin.push(result);
+}
+
+async function processResponseInNotification(response, fileurl) {
+  const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
+  const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
+  let gameName = await data[gameUrl.value].schema_name;
+  const loader = new Loader();
+  const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
+  const opponentsName = await Utils.getFormattedName(gameOppWebId);
+
+  //show response in UI
+  if (!gameName) {
+    gameName = gameUrl;
+  } else {
+    gameName = gameName.value;
+  }
+
+  let text;
+
+  if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
+    text = `${opponentsName} accepted your invitation to join "${gameName}"!`;
+  } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
+    text = `${opponentsName} refused your invitation to join ${gameName}...`;
+  }
+
+  if (!$('#invitation-response').is(':visible')) {
+    $('#invitation-response .modal-body').empty();
+  }
+
+  if ($('#invitation-response .modal-body').text() !== '') {
+    $('#invitation-response .modal-body').append('<br/>');
+  }
+
+  $('#invitation-response .modal-body').append(text);
+  $('#invitation-response').modal('show');
+
+  // TODO: store response in POD
+  dataSync.deleteFileForUser(fileurl);
 }
 
 $('#clear-inbox-btn').click(async () => {
