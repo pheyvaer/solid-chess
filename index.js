@@ -364,6 +364,11 @@ $('#join-game-btn').click(() => {
 
     const game = gamesToJoin[i];
 
+    // remove it from the array so it's no longer shown in the UI
+    gamesToJoin.splice(i, 1);
+    // remove it from the inbox so it's longer loaded when the app is reloaded
+    dataSync.deleteFileForUser(game.fileUrl);
+
     afterGameSpecificOptions();
     joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
   } else {
