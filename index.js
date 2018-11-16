@@ -472,67 +472,13 @@ function updateStatus() {
  * @returns {Promise<void>}
  */
 async function checkForNotifications() {
-  console.log('refresh started');
+  console.log('Checking for new notifications');
 
   const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId));
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    if (semanticGame && semanticGame.isOpponentsTurn()) {
-      const lastMoveUrl = semanticGame.getLastMove();
-      let nextMoveUrl;
-      let endsGame = false;
-
-      if (lastMoveUrl) {
-        const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, semanticGame.getUrl());
-        nextMoveUrl = r.move;
-        endsGame = r.endsGame;
-      } else {
-        nextMoveUrl = await Utils.getFirstHalfMove(fileurl, semanticGame.getUrl());
-      }
-
-      if (nextMoveUrl) {
-        console.log(nextMoveUrl);
-        dataSync.deleteFileForUser(fileurl);
-
-        if (lastMoveUrl) {
-          let update = `INSERT DATA {
-          <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
-        `;
-
-          if (endsGame) {
-            update += `<${semanticGame.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
-          }
-
-          update += '}';
-
-          dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
-        } else {
-          dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-          <${semanticGame.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
-        }`);
-        }
-
-        let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
-
-        //TODO check if there really is a bug in LDflex.
-        if (!san) {
-          san = await Utils.getSANRecord(nextMoveUrl);
-
-          if (san) {
-            console.warn('san: found by using Comunica directly, but not when using LDflex. Bug?');
-          }
-        }
-
-        if (san) {
-          semanticGame.loadMove(san.value, {url: nextMoveUrl});
-          board.position(semanticGame.getChess().fen());
-          updateStatus();
-        } else {
-          console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
-        }
-      }
-    }
+    checkForNewMove(fileurl);
 
     // check for acceptances of invitations
     const response = await Utils.getResponseToInvitation(fileurl);
@@ -548,6 +494,89 @@ async function checkForNotifications() {
       processGameToJoin(gameToJoin, fileurl);
     }
   });
+}
+
+async function checkForNewMove(fileurl) {
+  const originalMove = await Utils.getOriginalHalfMove(fileurl);
+  let gameUrl = await data[originalMove][namespaces.schema + 'subEvent'];
+
+  if (gameUrl) {
+    gameUrl = gameUrl.value;
+    let game = semanticGame;
+
+    if (!game || game.getUrl() !== gameUrl) {
+      const gameStorageUrl = await Utils.getStorageForGame(userWebId, gameUrl);
+
+      if (gameStorageUrl) {
+        const loader = new Loader();
+        game = await loader.loadFromUrl(gameUrl, userWebId, gameStorageUrl);
+
+        if (game && game.isOpponentsTurn()) {
+          const lastMoveUrl = game.getLastMove();
+          let nextMoveUrl;
+          let endsGame = false;
+
+          if (lastMoveUrl) {
+            const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
+            nextMoveUrl = r.move;
+            endsGame = r.endsGame;
+          } else {
+            nextMoveUrl = await Utils.getFirstHalfMove(fileurl, game.getUrl());
+          }
+
+          if (nextMoveUrl) {
+            console.log(nextMoveUrl);
+            dataSync.deleteFileForUser(fileurl);
+
+            if (lastMoveUrl) {
+              let update = `INSERT DATA {
+                <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
+              `;
+
+              if (endsGame) {
+                update += `<${game.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
+              }
+
+              update += '}';
+
+              dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
+            } else {
+              dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+                <${game.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
+              }`);
+            }
+
+            if (semanticGame && game.getUrl() === semanticGame.getUrl()) {
+              let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
+
+              //TODO check if there really is a bug in LDflex.
+              if (!san) {
+                san = await Utils.getSANRecord(nextMoveUrl);
+
+                if (san) {
+                  console.warn('san: found by using Comunica directly, but not when using LDflex. Bug?');
+                }
+              }
+
+              if (san) {
+                semanticGame.loadMove(san.value, {url: nextMoveUrl});
+                board.position(semanticGame.getChess().fen());
+                updateStatus();
+              } else {
+                console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
+              }
+            }
+          }
+        }
+      } else {
+        console.error(`No storage location was found for the game "${gameUrl}". Ignoring this notification.`);
+        //TODO throw error
+      }
+    }
+  } else {
+    console.error(`No game was found for the notification about move "${originalMove}". Ignoring this notification.`);
+    //TODO throw error
+  }
 }
 
 /**
