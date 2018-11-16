@@ -131,25 +131,19 @@ async function joinExistingChessGame(gameUrl, invitationUrl, opponentWebId) {
   const loader = new Loader();
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = opponentWebId;
+  const response = await Utils.generateResponseToInvitation(userDataUrl, invitationUrl, userWebId, oppWebId, "yes");
 
-  if (await Utils.writePermission(userDataUrl, dataSync)) {
-    const response = await Utils.generateResponseToInvitation(userDataUrl, invitationUrl, userWebId, oppWebId, "yes");
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
+  <${gameUrl}> a <${namespaces.chess}ChessGame>;
+    <${namespaces.storage}storeIn> <${userDataUrl}>.
+    
+    ${response.sparqlUpdate}
+  }`);
+  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${gameUrl}> <${namespaces.schema}contributor> <${userWebId}>; <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
+  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(opponentWebId), response.notification);
 
-    dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-    <${gameUrl}> a <${namespaces.chess}ChessGame>;
-      <${namespaces.storage}storeIn> <${userDataUrl}>.
-      
-      ${response.sparqlUpdate}
-    }`);
-    dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${userWebId}> <${namespaces.game}participatesIn> <${gameUrl}>. <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
-    dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(opponentWebId), response.notification);
-
-    setUpBoard(semanticGame);
-    setUpAfterEveryGameOptionIsSetUp();
-  } else {
-    $('#write-permission-url').text(userDataUrl);
-    $('#write-permission').modal('show');
-  }
+  setUpBoard(semanticGame);
+  setUpAfterEveryGameOptionIsSetUp();
 }
 
 /**
@@ -260,6 +254,10 @@ auth.trackSession(async session => {
       $('#user-name').removeClass('hidden');
       $('#user-name').text(name);
     }
+
+    checkForNotifications();
+    // refresh every 5sec
+    refreshIntervalId = setInterval(checkForNotifications, 5000);
   } else {
     $('#nav-login-btn').removeClass('hidden');
     $('#user-menu').addClass('hidden');
@@ -272,6 +270,8 @@ auth.trackSession(async session => {
     userWebId = null;
     semanticGame = null;
     board = null;
+    clearInterval(refreshIntervalId);
+    refreshIntervalId = null;
   }
 });
 
@@ -349,28 +349,33 @@ $('#join-btn').click(async () => {
   }
 });
 
-$('#join-game-btn').click(() => {
-  $('#join-game-options').addClass('hidden');
-
+$('#join-game-btn').click(async () => {
   if ($('#join-data-url').val() !== userWebId) {
     userDataUrl = $('#join-data-url').val();
-    const gameUrl = $('#game-urls').val();
 
-    let i = 0;
+    if (await Utils.writePermission(userDataUrl, dataSync)){
+      $('#join-game-options').addClass('hidden');
+      const gameUrl = $('#game-urls').val();
 
-    while (i < gamesToJoin.length && gamesToJoin[i].gameUrl !== gameUrl) {
-        i ++;
+      let i = 0;
+
+      while (i < gamesToJoin.length && gamesToJoin[i].gameUrl !== gameUrl) {
+        i++;
+      }
+
+      const game = gamesToJoin[i];
+
+      // remove it from the array so it's no longer shown in the UI
+      gamesToJoin.splice(i, 1);
+      // remove it from the inbox so it's longer loaded when the app is reloaded
+      dataSync.deleteFileForUser(game.fileUrl);
+
+      afterGameSpecificOptions();
+      joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
+    } else {
+      $('#write-permission-url').text(userDataUrl);
+      $('#write-permission').modal('show');
     }
-
-    const game = gamesToJoin[i];
-
-    // remove it from the array so it's no longer shown in the UI
-    gamesToJoin.splice(i, 1);
-    // remove it from the inbox so it's longer loaded when the app is reloaded
-    dataSync.deleteFileForUser(game.fileUrl);
-
-    afterGameSpecificOptions();
-    joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
   } else {
     console.warn('We are pretty sure you do not want to remove your WebID.');
   }
@@ -498,84 +503,97 @@ async function checkForNotifications() {
 
 async function checkForNewMove(fileurl) {
   const originalMove = await Utils.getOriginalHalfMove(fileurl);
-  let gameUrl = await data[originalMove][namespaces.schema + 'subEvent'];
 
-  if (gameUrl) {
-    gameUrl = gameUrl.value;
-    let game = semanticGame;
+  if (originalMove) {
+    let gameUrl = await data[originalMove][namespaces.schema + 'subEvent'];
 
-    if (!game || game.getUrl() !== gameUrl) {
-      const gameStorageUrl = await Utils.getStorageForGame(userWebId, gameUrl);
+    if (!gameUrl) {
+      gameUrl = await Utils.getGameOfMove(originalMove);
 
-      if (gameStorageUrl) {
-        const loader = new Loader();
-        game = await loader.loadFromUrl(gameUrl, userWebId, gameStorageUrl);
+      if (gameUrl) {
+        console.error('game: found by using Comunica directly, but not when using LDflex. Bug?');
+      }
+    }
 
-        if (game && game.isOpponentsTurn()) {
-          const lastMoveUrl = game.getLastMove();
-          let nextMoveUrl;
-          let endsGame = false;
+    if (gameUrl) {
+      gameUrl = gameUrl.value;
+      let game = semanticGame;
+      let gameStorageUrl;
+
+      if (!game || game.getUrl() !== gameUrl) {
+        gameStorageUrl = await Utils.getStorageForGame(userWebId, gameUrl);
+
+        if (gameStorageUrl) {
+          const loader = new Loader();
+          game = await loader.loadFromUrl(gameUrl, userWebId, gameStorageUrl);
+        } else {
+          console.log(`No storage location is found for game "${gameUrl}". Ignoring notification in ${fileurl}.`);
+        }
+      } else {
+        gameStorageUrl = userDataUrl;
+      }
+
+      if (game && game.isOpponentsTurn()) {
+        const lastMoveUrl = game.getLastMove();
+        let nextMoveUrl;
+        let endsGame = false;
+
+        if (lastMoveUrl) {
+          const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
+          nextMoveUrl = r.move;
+          endsGame = r.endsGame;
+        } else {
+          nextMoveUrl = await Utils.getFirstHalfMove(fileurl, game.getUrl());
+        }
+
+        if (nextMoveUrl) {
+          console.log(nextMoveUrl);
+          dataSync.deleteFileForUser(fileurl);
 
           if (lastMoveUrl) {
-            const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
-            nextMoveUrl = r.move;
-            endsGame = r.endsGame;
-          } else {
-            nextMoveUrl = await Utils.getFirstHalfMove(fileurl, game.getUrl());
-          }
+            let update = `INSERT DATA {
+              <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
+            `;
 
-          if (nextMoveUrl) {
-            console.log(nextMoveUrl);
-            dataSync.deleteFileForUser(fileurl);
-
-            if (lastMoveUrl) {
-              let update = `INSERT DATA {
-                <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
-              `;
-
-              if (endsGame) {
-                update += `<${game.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
-              }
-
-              update += '}';
-
-              dataSync.executeSPARQLUpdateForUser(userDataUrl, update);
-            } else {
-              dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-                <${game.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
-              }`);
+            if (endsGame) {
+              update += `<${game.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
             }
 
-            if (semanticGame && game.getUrl() === semanticGame.getUrl()) {
-              let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
+            update += '}';
 
-              //TODO check if there really is a bug in LDflex.
-              if (!san) {
-                san = await Utils.getSANRecord(nextMoveUrl);
+            dataSync.executeSPARQLUpdateForUser(gameStorageUrl, update);
+          } else {
+            dataSync.executeSPARQLUpdateForUser(gameStorageUrl, `INSERT DATA {
+              <${game.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
+            }`);
+          }
 
-                if (san) {
-                  console.warn('san: found by using Comunica directly, but not when using LDflex. Bug?');
-                }
-              }
+          if (semanticGame && game.getUrl() === semanticGame.getUrl()) {
+            let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
+
+            //TODO check if there really is a bug in LDflex.
+            if (!san) {
+              san = await Utils.getSANRecord(nextMoveUrl);
 
               if (san) {
-                semanticGame.loadMove(san.value, {url: nextMoveUrl});
-                board.position(semanticGame.getChess().fen());
-                updateStatus();
-              } else {
-                console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
+                console.error('san: found by using Comunica directly, but not when using LDflex. Bug?');
               }
+            }
+
+            if (san) {
+              semanticGame.loadMove(san.value, {url: nextMoveUrl});
+              board.position(semanticGame.getChess().fen());
+              updateStatus();
+            } else {
+              console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
             }
           }
         }
-      } else {
-        console.error(`No storage location was found for the game "${gameUrl}". Ignoring this notification.`);
-        //TODO throw error
       }
+    } else {
+      console.error(`No game was found for the notification about move "${originalMove}". Ignoring notification in ${fileurl}.`);
+      //TODO throw error
     }
-  } else {
-    console.error(`No game was found for the notification about move "${originalMove}". Ignoring this notification.`);
-    //TODO throw error
   }
 }
 
@@ -696,6 +714,3 @@ function getNewGamePosition() {
     return null;
   }
 }
-
-// refresh every 5sec
-refreshIntervalId = setInterval(checkForNotifications, 5000);
