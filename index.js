@@ -88,7 +88,8 @@ $('#save-theme-btn').click(() => {
  * This method does the necessary updates of the UI when the different game options are shown.
  */
 function setUpForEveryGameOption() {
-  $('#game').removeClass('hidden');
+  $('#game-loading').removeClass('hidden');
+  // $('#game').removeClass('hidden');
 }
 
 /**
@@ -222,6 +223,9 @@ async function setUpBoard(semanticGame) {
   };
 
   board = ChessBoard('board', cfg);
+
+  $('#game').removeClass('hidden');
+  $('#game-loading').addClass('hidden');
 
   $('.black-3c85d').css('background-color', possibleThemes[selectedTheme].color.black);
   $('.white-1e1d7').css('background-color', possibleThemes[selectedTheme].color.white);
@@ -387,9 +391,10 @@ $('#continue-btn').click(async () => {
     $('#continue-game-options').removeClass('hidden');
 
     const games = await Utils.getGamesToContinue(userWebId);
-    const $select = $('#continue-game-urls');
+    const $tbody = $('#continue-game-table tbody');
+    $tbody.empty();
+
     $('#continue-looking').addClass('hidden');
-    $select.empty();
 
     if (games.length > 0) {
       $('#continue-loading').addClass('hidden');
@@ -408,7 +413,29 @@ $('#continue-btn').click(async () => {
         const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
         const oppName = await Utils.getFormattedName(oppWebId);
 
-        $select.append($(`<option value="${game.gameUrl}">${name} (${oppName})</option>`));
+        const $row = $(`
+          <tr data-game-url="${game.gameUrl}" class='clickable-row'>
+            <th scope="row">${name}</th>
+            <td>${oppName}</td>
+          </tr>`);
+
+        $row.click(function() {
+          $('#continue-game-options').addClass('hidden');
+          const selectedGame = $(this).data('game-url');
+
+          let i = 0;
+
+          while (i < games.length && games[i].gameUrl !== selectedGame) {
+            i ++;
+          }
+
+          userDataUrl = games[i].storeUrl;
+
+          afterGameSpecificOptions();
+          continueExistingChessGame(selectedGame);
+        });
+
+        $tbody.append($row);
       });
     } else {
       $('#no-continue').removeClass('hidden');

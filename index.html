@@ -105,17 +105,28 @@
           </div>
           <form id="continue-form" class="hidden">
             <div class="form-group">
-              <label for="continue-game-urls">Game you want to continue</label>
-              <select id="continue-game-urls"></select>
+              <span>Select the game you want to continue</span>
+              <table id="continue-game-table" class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th scope="col" id="table-title" >Title</th>
+                    <th scope="col">Opponent</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
             </div>
-            <button id="continue-game-btn" type="button" class="btn btn-dark">Continue!</button>
             <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
           </form>
         </div>
 
+        <div id='game-loading' class="hidden">
+          <span>Loading your game...</span>
+        </div>
+
         <div id="game" class="hidden" >
           <p>Name: <span id="name-of-the-game"></span></p>
-          <div id="board"></div>
+          <div id="board" style="width: 400px"></div>
           <div id="game-details">
             <p>Status: <span id="status"></span></p>
             <p>Opponent: <span id="opponent-name"></span></p>
@@ -132,6 +143,10 @@
             No central sever is required to run or set up a game.
             All personal data about the game is stored on your POD.
             Requests to join and updates of a game are sent to the inbox of your opponent directly.
+          </p>
+
+          <p class="text-justify">
+            The source of this app can be found on <a href="https://github.com/pheyvaer/solid-chess" target="_blank">Github</a>.
           </p>
         </div>
       </div>

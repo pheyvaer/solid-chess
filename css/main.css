@@ -56,3 +56,24 @@ a {
   width: 95vw;
   max-width: 500px;
 }
+
+#continue-game-table {
+  table-layout: fixed!important;
+  word-wrap: break-word;
+}
+
+#continue-game-table tr {
+  font-size: 14px;
+}
+
+#table-title {
+  width: 50%;
+}
+
+tr.clickable-row {
+  cursor: pointer;
+}
+
+.btn-cancel {
+  margin-bottom: 25px;
+}
