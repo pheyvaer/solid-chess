@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="css/chessboard-0.3.0.min.css">
     <link rel="stylesheet" href="css/main.css">
   </head>
-  <body>
+  <body vocab="http://schema.org/">
     <div class="container">
       <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <span class="navbar-brand"><i class="fas fa-chess"></i>&nbsp;&nbsp;Solid Chess</span>
@@ -103,21 +103,19 @@
               <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
             </div>
           </div>
-          <form id="continue-form" class="hidden">
-            <div class="form-group">
-              <span>Select the game you want to continue</span>
-              <table id="continue-game-table" class="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th scope="col" id="table-title" >Title</th>
-                    <th scope="col">Opponent</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+          <div id="continue-games" class="hidden">
+            <span>Select the game you want to continue</span>
+            <table id="continue-game-table" class="table table-hover">
+              <thead>
+                <tr>
+                  <th scope="col" id="table-title" >Title</th>
+                  <th scope="col">Opponent</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
             <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
-          </form>
+          </div>
         </div>
 
         <div id='game-loading' class="hidden">
@@ -136,10 +134,10 @@
       </div>
 
       <div id="how-it-works" class="row justify-content-center">
-        <div class="col-6">
+        <div class="col-6" typeof="SoftwareApplication VideoGame" about="https://pheyvaer.github.io/solid-chess/">
           <h3>How it works</h3>
           <p class="text-justify">
-            This is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/">Solid</a>.
+            <span property="name">Solid Chess</span> is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/" property="storageRequirements">Solid</a>.
             No central sever is required to run or set up a game.
             All personal data about the game is stored on your POD.
             Requests to join and updates of a game are sent to the inbox of your opponent directly.

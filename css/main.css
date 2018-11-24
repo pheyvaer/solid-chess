@@ -1,13 +1,17 @@
 body {
-  background-image: url("../img/chess-background.jpg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: white;
+  background-image: url("../img/bg-repeat.png");
+  background-repeat: repeat;
+    background-color: ghostwhite;
+  /*background-size: cover;*/
 }
 
 a {
   color: white!important;
   text-decoration: underline;
+}
+
+.container {
+    background-color: wheat;
 }
 
 #login-required, #theme-selector, #write-permission, #invitation-response {
@@ -37,7 +41,11 @@ a {
 
 #how-it-works {
   margin-top: 50px;
-  color: white;
+  color: black;
+}
+
+#how-it-works a {
+  color: black!important;
 }
 
 #custom-position-chk-group {
@@ -76,4 +84,15 @@ tr.clickable-row {
 
 .btn-cancel {
   margin-bottom: 25px;
+}
+
+#start-new-game-btn {
+    margin-bottom: 25px;
+}
+
+table.table > thead > tr > th{
+    border: none;
+}
+table.table > tbody > tr > td{
+    border-top: 1px solid black;
 }

@@ -398,7 +398,7 @@ $('#continue-btn').click(async () => {
 
     if (games.length > 0) {
       $('#continue-loading').addClass('hidden');
-      $('#continue-form').removeClass('hidden');
+      $('#continue-games').removeClass('hidden');
 
       games.forEach(async game => {
         let name = await data[game.gameUrl]['http://schema.org/name'];
@@ -415,7 +415,7 @@ $('#continue-btn').click(async () => {
 
         const $row = $(`
           <tr data-game-url="${game.gameUrl}" class='clickable-row'>
-            <th scope="row">${name}</th>
+            <td>${name}</td>
             <td>${oppName}</td>
           </tr>`);
 
