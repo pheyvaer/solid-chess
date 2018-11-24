@@ -5,16 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-### [0.0.7] - 2018-11-XX
+### [0.0.7] - 2018-11-24
 
 ### Added
 
 - add documentation in the code
 - configure JSDoc: documentation is available in `docs`
 - use [schema:InviteAction](http://schema.org/InviteAction) to represent an invitation to join a chess game
+- use [schema:RsvpAction](http://schema.org/RsvpAction) to represent an response to invitation
 - use [schema:contributor](http://schema.org/contributor) to add the games of user to his WebId
 - send acceptance of invitation when joining a game
 - show modal when response to invitation is received
+- show games to continue in table
+- update background
+- add basic RDFa
 
 ### Fixed
 
