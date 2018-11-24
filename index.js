@@ -388,11 +388,12 @@ $('#join-game-btn').click(async () => {
 $('#continue-btn').click(async () => {
   if (userWebId) {
     afterGameOption();
+
+    const $tbody = $('#continue-game-table tbody');
+    $tbody.empty();
     $('#continue-game-options').removeClass('hidden');
 
     const games = await Utils.getGamesToContinue(userWebId);
-    const $tbody = $('#continue-game-table tbody');
-    $tbody.empty();
 
     $('#continue-looking').addClass('hidden');
 
@@ -538,7 +539,7 @@ async function checkForNewMove(fileurl) {
       gameUrl = await Utils.getGameOfMove(originalMove);
 
       if (gameUrl) {
-        console.error('game: found by using Comunica directly, but not when using LDflex. Bug?');
+        console.error('game: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
       }
     }
 
@@ -603,7 +604,7 @@ async function checkForNewMove(fileurl) {
               san = await Utils.getSANRecord(nextMoveUrl);
 
               if (san) {
-                console.error('san: found by using Comunica directly, but not when using LDflex. Bug?');
+                console.error('san: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
               }
             }
 

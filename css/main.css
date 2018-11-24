@@ -1,8 +1,8 @@
 body {
   background-image: url("../img/bg-repeat.png");
   background-repeat: repeat;
-    background-color: ghostwhite;
-  /*background-size: cover;*/
+  background-color: ghostwhite;
+  color: white;
 }
 
 a {
@@ -11,7 +11,7 @@ a {
 }
 
 .container {
-    background-color: wheat;
+  background-color: darkcyan;
 }
 
 #login-required, #theme-selector, #write-permission, #invitation-response {
@@ -41,11 +41,6 @@ a {
 
 #how-it-works {
   margin-top: 50px;
-  color: black;
-}
-
-#how-it-works a {
-  color: black!important;
 }
 
 #custom-position-chk-group {
@@ -82,17 +77,13 @@ tr.clickable-row {
   cursor: pointer;
 }
 
-.btn-cancel {
+.btn-cancel, #start-new-game-btn, #join-game-btn, #stop-playing {
   margin-bottom: 25px;
-}
-
-#start-new-game-btn {
-    margin-bottom: 25px;
 }
 
 table.table > thead > tr > th{
     border: none;
 }
 table.table > tbody > tr > td{
-    border-top: 1px solid black;
+    border-top: 1px solid white;
 }
