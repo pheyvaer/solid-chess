@@ -529,6 +529,11 @@ async function checkForNotifications() {
   });
 }
 
+/**
+ * This method checks for new moves in a notification.
+ * @param fileurl: the url of file that contains the notification.
+ * @returns {Promise<void>}
+ */
 async function checkForNewMove(fileurl) {
   const originalMove = await Utils.getOriginalHalfMove(fileurl);
 
@@ -599,7 +604,6 @@ async function checkForNewMove(fileurl) {
           if (semanticGame && game.getUrl() === semanticGame.getUrl()) {
             let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
 
-            //TODO check if there really is a bug in LDflex.
             if (!san) {
               san = await Utils.getSANRecord(nextMoveUrl);
 
