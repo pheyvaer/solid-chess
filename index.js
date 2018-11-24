@@ -688,7 +688,9 @@ async function processResponseInNotification(response, fileurl) {
   $('#invitation-response .modal-body').append(text);
   $('#invitation-response').modal('show');
 
-  // TODO: store response in POD
+  dataSync.executeSPARQLUpdateForUser(await Utils.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
+    <${response.invitationUrl}> <${namespaces.schema}result> <${response.responseUrl}>}
+  `);
   dataSync.deleteFileForUser(fileurl);
 }
 
