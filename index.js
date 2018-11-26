@@ -511,7 +511,11 @@ async function checkForNotifications() {
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    checkForNewMove(fileurl);
+    Utils.checkForNewMove(semanticGame, fileurl, userDataUrl, dataSync, (san, url) => {
+      semanticGame.loadMove(san, {url});
+      board.position(semanticGame.getChess().fen());
+      updateStatus();
+    });
 
     // check for acceptances of invitations
     const response = await Utils.getResponseToInvitation(fileurl);
@@ -527,106 +531,6 @@ async function checkForNotifications() {
       processGameToJoin(gameToJoin, fileurl);
     }
   });
-}
-
-/**
- * This method checks for new moves in a notification.
- * @param fileurl: the url of file that contains the notification.
- * @returns {Promise<void>}
- */
-async function checkForNewMove(fileurl) {
-  const originalMove = await Utils.getOriginalHalfMove(fileurl);
-
-  if (originalMove) {
-    let gameUrl = await data[originalMove][namespaces.schema + 'subEvent'];
-
-    if (!gameUrl) {
-      gameUrl = await Utils.getGameOfMove(originalMove);
-
-      if (gameUrl) {
-        console.error('game: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
-      }
-    }
-
-    if (gameUrl) {
-      gameUrl = gameUrl.value;
-      let game = semanticGame;
-      let gameStorageUrl;
-
-      if (!game || game.getUrl() !== gameUrl) {
-        gameStorageUrl = await Utils.getStorageForGame(userWebId, gameUrl);
-
-        if (gameStorageUrl) {
-          const loader = new Loader();
-          game = await loader.loadFromUrl(gameUrl, userWebId, gameStorageUrl);
-        } else {
-          console.log(`No storage location is found for game "${gameUrl}". Ignoring notification in ${fileurl}.`);
-        }
-      } else {
-        gameStorageUrl = userDataUrl;
-      }
-
-      if (game && game.isOpponentsTurn()) {
-        const lastMoveUrl = game.getLastMove();
-        let nextMoveUrl;
-        let endsGame = false;
-
-        if (lastMoveUrl) {
-          const r = await Utils.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
-          nextMoveUrl = r.move;
-          endsGame = r.endsGame;
-        } else {
-          nextMoveUrl = await Utils.getFirstHalfMove(fileurl, game.getUrl());
-        }
-
-        if (nextMoveUrl) {
-          console.log(nextMoveUrl);
-          dataSync.deleteFileForUser(fileurl);
-
-          if (lastMoveUrl) {
-            let update = `INSERT DATA {
-              <${lastMoveUrl.url}> <${namespaces.chess}nextHalfMove> <${nextMoveUrl}>.
-            `;
-
-            if (endsGame) {
-              update += `<${game.getUrl()}> <${namespaces.chess}hasLastHalfMove> <${nextMoveUrl}>.`;
-            }
-
-            update += '}';
-
-            dataSync.executeSPARQLUpdateForUser(gameStorageUrl, update);
-          } else {
-            dataSync.executeSPARQLUpdateForUser(gameStorageUrl, `INSERT DATA {
-              <${game.getUrl()}> <${namespaces.chess}hasFirstHalfMove> <${nextMoveUrl}>.
-            }`);
-          }
-
-          if (semanticGame && game.getUrl() === semanticGame.getUrl()) {
-            let san = await data[nextMoveUrl][namespaces.chess + 'hasSANRecord'];
-
-            if (!san) {
-              san = await Utils.getSANRecord(nextMoveUrl);
-
-              if (san) {
-                console.error('san: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
-              }
-            }
-
-            if (san) {
-              semanticGame.loadMove(san.value, {url: nextMoveUrl});
-              board.position(semanticGame.getChess().fen());
-              updateStatus();
-            } else {
-              console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
-            }
-          }
-        }
-      }
-    } else {
-      console.error(`No game was found for the notification about move "${originalMove}". Ignoring notification in ${fileurl}.`);
-      //TODO throw error
-    }
-  }
 }
 
 /**

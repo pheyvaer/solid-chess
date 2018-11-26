@@ -4,10 +4,18 @@ const IdentityManager = require('../node_modules/@solid/cli/src/IdentityManager'
 const Utils = require('../lib/utils');
 const { default: data } = require('@solid/query-ldflex');
 const {Loader} = require('semantic-chess');
+const readline = require('readline');
+const DataSync = require('../lib/datasync');
+const https = require('https');
 const Q = require('q');
 
 let userWebId;
+let oppWebId;
 let session;
+let client;
+let dataSync = new DataSync();
+let semanticGame = null;
+let userDataUrl;
 
 showMainMenu();
 
@@ -102,6 +110,7 @@ async function showNewGameMenu() {
 }
 
 async function showContinueGameMenu() {
+  process.stdout.write('Loading your games...');
   const games = await Utils.getGamesToContinue(userWebId);
   const gamesMap = {};
 
@@ -128,6 +137,8 @@ async function showContinueGameMenu() {
       gamesMap[str] = game;
     }
 
+    clearLine();
+
     inquirer
       .prompt([
         {
@@ -138,13 +149,36 @@ async function showContinueGameMenu() {
           'default': 0
         }
       ])
-      .then(answers => {
-        console.log(answers);
+      .then(async answers => {
+        const gameName = answers['continue-game-menu'];
+        const game = gamesMap[gameName];
+
+        const loader = new Loader();
+        semanticGame = await loader.loadFromUrl(game.gameUrl, userWebId, game.storeUrl);
+        oppWebId = semanticGame.getOpponentWebId();
+        userDataUrl = game.storeUrl;
+
+        console.log(semanticGame.getChess().ascii());
+
+        if (semanticGame.isOpponentsTurn()) {
+          console.log('Waiting for opponent...');
+        } else {
+          console.log(`It's your turn.`);
+        }
+
+        setInterval(checkForNotifications, 5000);
       });
   } else {
+    readline.clearLine(process.stdout);
+    readline.cursorTo(process.stdout, 0);
     console.log(`You don't have any games to continue.`);
     showGameMenu();
   }
+}
+
+function clearLine() {
+  readline.clearLine(process.stdout);
+  readline.cursorTo(process.stdout, 0);
 }
 
 function login() {
@@ -169,10 +203,10 @@ function login() {
       const {identityProvider, username, password} = answers;
 
       const identityManager = IdentityManager.fromJSON('{}');
-      const client = new SolidClient({ identityManager });
+      client = new SolidClient({ identityManager });
 
       try {
-      session = await client.login(identityProvider, { username, password });
+        session = await client.login(identityProvider, { username, password });
         userWebId = session.idClaims.sub;
         console.log(`Welcome ${await Utils.getFormattedName(userWebId)}!`);
 
@@ -184,12 +218,64 @@ function login() {
     });
 }
 
-async function getToken(client, { identityProvider, username, password, url }) {
-  const session = await client.login(identityProvider, { username, password });
-  return client.createToken(url, session);
-}
-
 function quit() {
   console.log('Thanks for playing, bye!');
   process.exit(0);
+}
+
+async function fetch(url) {
+  const deferred = Q.defer();
+  const token = await client.createToken(url, session);
+
+  const options = {
+    method: 'GET',
+    headers:{
+      Authorization: ` Bearer ${token}`
+    }
+  };
+
+  const req = https.request(url, options, (res) => {
+    const status = res.statusCode;
+    res.setEncoding('utf8');
+    let data = '';
+
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    res.on('end', () => {
+      deferred.resolve({status, text: () => data, url});
+    });
+  });
+
+  req.on('error', (e) => {
+    console.error(`problem with request: ${e.message}`);
+  });
+
+  req.end();
+
+  return deferred.promise;
+}
+
+async function checkForNotifications() {
+  console.log('checking...');
+  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId), fetch);
+  console.log(updates);
+
+  updates.forEach(async (fileurl) => {
+    // check for new moves
+    Utils.checkForNewMove(semanticGame, fileurl, userDataUrl, dataSync, (san, url) => {
+      semanticGame.loadMove(san, {url});
+
+      readline.cursorTo(process.stdout, 0,-10);
+
+      console.log(semanticGame.getChess().ascii());
+
+      if (semanticGame.isOpponentsTurn()) {
+        console.log('Waiting for opponent...');
+      } else {
+        console.log(`It's your turn.`);
+      }
+    });
+  });
 }
