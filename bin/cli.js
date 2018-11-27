@@ -16,6 +16,7 @@ let client;
 let dataSync = new DataSync();
 let semanticGame = null;
 let userDataUrl;
+let intervalID;
 
 showMainMenu();
 
@@ -161,12 +162,10 @@ async function showContinueGameMenu() {
         console.log(semanticGame.getChess().ascii());
 
         if (semanticGame.isOpponentsTurn()) {
-          console.log('Waiting for opponent...');
+          showOpponentsTurn();
         } else {
-          console.log(`It's your turn.`);
+          showUsersTurn();
         }
-
-        setInterval(checkForNotifications, 5000);
       });
   } else {
     readline.clearLine(process.stdout);
@@ -223,16 +222,15 @@ function quit() {
   process.exit(0);
 }
 
-async function fetch(url) {
+async function fetch(url, options = {method: 'GET'}) {
   const deferred = Q.defer();
   const token = await client.createToken(url, session);
 
-  const options = {
-    method: 'GET',
-    headers:{
-      Authorization: ` Bearer ${token}`
-    }
-  };
+  if (!options.headers) {
+    options.headers = {};
+  }
+
+  options.headers.Authorization = ` Bearer ${token}`;
 
   const req = https.request(url, options, (res) => {
     const status = res.statusCode;
@@ -252,30 +250,76 @@ async function fetch(url) {
     console.error(`problem with request: ${e.message}`);
   });
 
+  if (options.body) {
+    req.write(options.body);
+  }
+
   req.end();
 
   return deferred.promise;
 }
 
 async function checkForNotifications() {
-  console.log('checking...');
+  //console.log('checking...');
   const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId), fetch);
-  console.log(updates);
+  //console.log(updates);
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    Utils.checkForNewMove(semanticGame, fileurl, userDataUrl, dataSync, (san, url) => {
+    Utils.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, fetch, (san, url) => {
       semanticGame.loadMove(san, {url});
 
-      readline.cursorTo(process.stdout, 0,-10);
+      //readline.cursorTo(process.stdout, 0,-10);
 
       console.log(semanticGame.getChess().ascii());
 
       if (semanticGame.isOpponentsTurn()) {
-        console.log('Waiting for opponent...');
+        showOpponentsTurn();
       } else {
-        console.log(`It's your turn.`);
+        showUsersTurn();
       }
     });
   });
+}
+
+function showUsersTurn() {
+  if (intervalID) {
+    clearInterval(intervalID);
+  }
+
+  console.log(`It's your turn.`);
+  inquirer
+    .prompt([
+      {
+        name: 'next-move',
+        type: 'input',
+        message: 'What is your next move? ([from] => [to])'
+      }
+    ])
+    .then(async answers => {
+      const str = answers['next-move'];
+      const items = str.split(' ');
+      const from = items[0];
+      const to = items [2];
+      const move = semanticGame.doMove({from, to});
+
+      if (move) {
+        await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate, fetch);
+
+        if (move.notification) {
+          dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification, fetch);
+        }
+
+        console.log(semanticGame.getChess().ascii());
+        showOpponentsTurn();
+      } else {
+        console.log('Incorrect move. Try again.');
+        showUsersTurn();
+      }
+    });
+}
+
+function showOpponentsTurn() {
+  console.log('Waiting for opponent...');
+  intervalID = setInterval(checkForNotifications, 5000);
 }

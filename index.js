@@ -511,7 +511,7 @@ async function checkForNotifications() {
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    Utils.checkForNewMove(semanticGame, fileurl, userDataUrl, dataSync, (san, url) => {
+    Utils.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
       semanticGame.loadMove(san, {url});
       board.position(semanticGame.getChess().fen());
       updateStatus();
