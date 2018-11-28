@@ -298,10 +298,14 @@ function showUsersTurn() {
     ])
     .then(async answers => {
       const str = answers['next-move'];
+      let move;
       const items = str.split(' ');
-      const from = items[0];
-      const to = items [2];
-      const move = semanticGame.doMove({from, to});
+
+      if (items.length === 3) {
+        const from = items[0];
+        const to = items [2];
+        move = semanticGame.doMove({from, to});
+      }
 
       if (move) {
         await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate, fetch);
@@ -313,13 +317,13 @@ function showUsersTurn() {
         console.log(semanticGame.getChess().ascii());
         showOpponentsTurn();
       } else {
-        console.log('Incorrect move. Try again.');
+        console.log('🚫 Incorrect move. Try again.');
         showUsersTurn();
       }
     });
 }
 
 function showOpponentsTurn() {
-  console.log('Waiting for opponent...');
+  console.log('Waiting for opponent... ☕️');
   intervalID = setInterval(checkForNotifications, 5000);
 }
