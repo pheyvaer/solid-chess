@@ -17,6 +17,7 @@ let dataSync = new DataSync();
 let semanticGame = null;
 let userDataUrl;
 let intervalID;
+let currentPrompt;
 
 showMainMenu();
 
@@ -199,6 +200,7 @@ function login() {
       }
     ])
     .then(async answers => {
+      console.log('Logging in...');
       const {identityProvider, username, password} = answers;
 
       const identityManager = IdentityManager.fromJSON('{}');
@@ -276,6 +278,7 @@ async function checkForNotifications() {
       if (semanticGame.isOpponentsTurn()) {
         showOpponentsTurn();
       } else {
+        stopListeningForEscape();
         showUsersTurn();
       }
     });
@@ -287,8 +290,9 @@ function showUsersTurn() {
     clearInterval(intervalID);
   }
 
-  console.log(`It's your turn.`);
-  inquirer
+  console.log(`It's your turn. (Type "ESC" to quit.)`);
+
+  currentPrompt = inquirer
     .prompt([
       {
         name: 'next-move',
@@ -298,32 +302,86 @@ function showUsersTurn() {
     ])
     .then(async answers => {
       const str = answers['next-move'];
-      let move;
-      const items = str.split(' ');
 
-      if (items.length === 3) {
-        const from = items[0];
-        const to = items [2];
-        move = semanticGame.doMove({from, to});
-      }
+      if (str.toLowerCase() !== 'esc') {
+        let move;
+        const items = str.split(' ');
 
-      if (move) {
-        await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate, fetch);
-
-        if (move.notification) {
-          dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification, fetch);
+        if (items.length === 3) {
+          const from = items[0];
+          const to = items [2];
+          move = semanticGame.doMove({from, to});
         }
 
-        console.log(semanticGame.getChess().ascii());
-        showOpponentsTurn();
+        if (move) {
+          await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate, fetch);
+
+          if (move.notification) {
+            dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification, fetch);
+          }
+
+          console.log(semanticGame.getChess().ascii());
+          showOpponentsTurn();
+        } else {
+          console.log('🚫 Incorrect move. Try again.');
+          showUsersTurn();
+        }
       } else {
-        console.log('🚫 Incorrect move. Try again.');
-        showUsersTurn();
+        quitGame();
       }
     });
 }
 
 function showOpponentsTurn() {
-  console.log('Waiting for opponent... ☕️');
+  console.log('Waiting for opponent... ☕️ (Press ESC to quit.)');
+  listenForEscape();
   intervalID = setInterval(checkForNotifications, 5000);
+}
+
+function listenForEscape() {
+  const stdin = process.stdin;
+
+  // without this, we would only get streams once enter is pressed
+  stdin.setRawMode( true );
+
+  // resume stdin in the parent process (node app won't quit all by itself
+  // unless an error or process.exit() happens)
+  stdin.resume();
+
+  // i don't want binary, do you?
+  stdin.setEncoding( 'utf8' );
+
+  // on any data into stdin
+  stdin.on( 'data', keyPressed);
+}
+
+function stopListeningForEscape() {
+  process.stdin.off( 'data', keyPressed);
+}
+
+function keyPressed( key ){
+  if (semanticGame && semanticGame.isOpponentsTurn()) {
+    // ctrl-c ( end of text )
+    if (key === '\u0003') {
+      process.exit();
+    } else if (key === '\u001b') {
+      stopListeningForEscape();
+      quitGame();
+    }
+  }
+}
+
+function quitGame() {
+  console.log('Quiting this game. You can continue later.');
+
+  oppWebId = null;
+  semanticGame = null;
+  userDataUrl = null;
+
+  if (intervalID) {
+    clearInterval(intervalID);
+    intervalID = null;
+  }
+
+  showGameMenu();
 }
