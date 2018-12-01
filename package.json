@@ -32,7 +32,6 @@
     "n3": "^1.0.0-beta.2",
     "prefix-ns": "^0.1.2",
     "q": "^1.5.1",
-    "rxjs": "^6.3.3",
     "semantic-chess": "0.0.7",
     "solid-auth-client": "^2.2.10",
     "streamify-array": "^1.0.1",
