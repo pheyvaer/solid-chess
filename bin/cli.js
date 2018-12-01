@@ -8,6 +8,8 @@ const readline = require('readline');
 const DataSync = require('../lib/datasync');
 const https = require('https');
 const Q = require('q');
+const URI = require('uri-js');
+const {format} = require('date-fns');
 
 let userWebId;
 let oppWebId;
@@ -84,10 +86,15 @@ async function showNewGameMenu() {
   const friends = {};
 
   for await (const friend of data[userWebId].friends) {
-    let name = await Utils.getFormattedName(friend.value);
+    let name = await Utils.getFormattedName(friend);
 
-    friends[name] = friend;
+    friends[name] = friend.value;
   }
+
+  const parsedWebId = URI.parse(userWebId);
+  const today = format(new Date(), 'yyyyMMdd');
+
+  const defaultDataurl = `${parsedWebId.scheme}://${parsedWebId.host}/public/chess_${today}.ttl`;
 
   inquirer
     .prompt([
@@ -103,11 +110,16 @@ async function showNewGameMenu() {
       }, {
         name: 'dataurl',
         type: 'input',
-        message: 'Where do you want to store the game data?'
+        message: 'Where do you want to store the game data?',
+        'default': defaultDataurl
       }
     ])
-    .then(answers => {
-      console.log(answers);
+    .then(async answers => {
+      userDataUrl = answers['dataurl'];
+      oppWebId = friends[answers['opponent']];
+      semanticGame = await Utils.setUpNewGame(userDataUrl, userWebId, oppWebId, null, answers['name'], dataSync, fetch);
+
+      showGame();
     });
 }
 
@@ -155,18 +167,7 @@ async function showContinueGameMenu() {
         const gameName = answers['continue-game-menu'];
         const game = gamesMap[gameName];
 
-        const loader = new Loader();
-        semanticGame = await loader.loadFromUrl(game.gameUrl, userWebId, game.storeUrl);
-        oppWebId = semanticGame.getOpponentWebId();
-        userDataUrl = game.storeUrl;
-
-        console.log(semanticGame.getChess().ascii());
-
-        if (semanticGame.isOpponentsTurn()) {
-          showOpponentsTurn();
-        } else {
-          showUsersTurn();
-        }
+        loadAndShowGame(game.gameUrl, game.storeUrl);
       });
   } else {
     readline.clearLine(process.stdout);
@@ -384,4 +385,23 @@ function quitGame() {
   }
 
   showGameMenu();
+}
+
+async function loadAndShowGame(gameUrl, storeUrl) {
+  const loader = new Loader();
+  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, storeUrl);
+  oppWebId = semanticGame.getOpponentWebId();
+  userDataUrl = storeUrl;
+
+  showGame();
+}
+
+function showGame() {
+  console.log(semanticGame.getChess().ascii());
+
+  if (semanticGame.isOpponentsTurn()) {
+    showOpponentsTurn();
+  } else {
+    showUsersTurn();
+  }
 }

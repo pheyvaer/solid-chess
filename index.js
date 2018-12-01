@@ -107,14 +107,7 @@ async function setUpNewChessGame() {
   setUpForEveryGameOption();
 
   const startPosition = getNewGamePosition();
-  const gameUrl = await Utils.generateUniqueUrlForResource(userDataUrl);
-  semanticGame = new SemanticChess({url: gameUrl, moveBaseUrl: userDataUrl, userWebId, opponentWebId: oppWebId, name: gameName, startPosition});
-  const invitation =  await Utils.generateInvitation(userDataUrl, semanticGame.getUrl(), userWebId, oppWebId);
-
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n <${gameUrl}> <${namespaces.storage}storeIn> <${userDataUrl}>}`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${gameUrl}> <${namespaces.schema}contributor> <${userWebId}>; <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${invitation.sparqlUpdate}}`);
-  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), invitation.notification);
+  semanticGame = await Utils.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync);
 
   setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
