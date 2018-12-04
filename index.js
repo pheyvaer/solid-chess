@@ -521,28 +521,9 @@ async function checkForNotifications() {
     const gameToJoin = await Utils.getJoinRequest(fileurl, userWebId);
 
     if (gameToJoin) {
-      processGameToJoin(gameToJoin, fileurl);
+      gamesToJoin.push(await Utils.processGameToJoin(gameToJoin, fileurl));
     }
   });
-}
-
-/**
- * This method processes a notification that contains an invitation to join a game.
- * The resulting game is added to gamesToJoin (arra).
- * @param game: the object representing the relevant game information.
- * @param fileurl: the url of the file containing the notification.
- * @returns {Promise<void>}
- */
-async function processGameToJoin(game, fileurl) {
-  game.fileUrl = fileurl;
-  game.name = await data[game.gameUrl]['http://schema.org/name'];
-
-  if (game.name) {
-    game.name = game.name.value;
-  }
-
-  game.opponentsName = await Utils.getFormattedName(game.opponentWebId);
-  gamesToJoin.push(game);
 }
 
 /**

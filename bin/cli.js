@@ -20,6 +20,7 @@ let semanticGame = null;
 let userDataUrl;
 let intervalID;
 let currentPrompt;
+let gamesToJoin = [];
 
 showMainMenu();
 
@@ -71,6 +72,9 @@ function showGameMenu() {
       switch (item) {
         case 'New game':
           showNewGameMenu();
+          break;
+        case 'Join game':
+          showJoinGameMenu();
           break;
         case 'Continue game':
           showContinueGameMenu();
@@ -177,6 +181,41 @@ async function showContinueGameMenu() {
   }
 }
 
+async function showJoinGameMenu(){
+  process.stdout.write('Looking for games...');
+
+  await checkForNewGamesToJoin();
+
+  const gameNames = [];
+
+  gamesToJoin.forEach(game => {
+    let name = game.name;
+
+    if (!name) {
+      name = game.gameUrl;
+    }
+
+    gameNames.push(`${name} (${game.opponentsName})`);
+  });
+
+  clearLine();
+
+  inquirer
+    .prompt([
+      {
+        name: 'join-game-menu',
+        type: 'list',
+        message: 'Which game do you want to join?',
+        choices: gameNames,
+        'default': 0
+      }
+    ])
+    .then(async answers => {
+      const gameName = answers['join-game-menu'];
+      console.log(gameName);
+    });
+}
+
 function clearLine() {
   readline.clearLine(process.stdout);
   readline.cursorTo(process.stdout, 0);
@@ -210,6 +249,7 @@ function login() {
       try {
         session = await client.login(identityProvider, { username, password });
         userWebId = session.idClaims.sub;
+        clearLine();
         console.log(`Welcome ${await Utils.getFormattedName(userWebId)}!`);
 
         showGameMenu();
@@ -284,6 +324,19 @@ async function checkForNotifications() {
       }
     });
   });
+}
+
+async function checkForNewGamesToJoin() {
+  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId), fetch);
+  //console.log(updates);
+
+  for (const fileurl of updates) {
+    const gameToJoin = await Utils.getJoinRequest(fileurl, userWebId, fetch);
+
+    if (gameToJoin) {
+      gamesToJoin.push(await Utils.processGameToJoin(gameToJoin, fileurl));
+    }
+  }
 }
 
 function showUsersTurn() {
