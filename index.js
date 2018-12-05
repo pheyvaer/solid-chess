@@ -8,7 +8,7 @@ const { default: data } = require('@solid/query-ldflex');
 
 let userWebId;
 let semanticGame;
-let dataSync = new DataSync();
+let dataSync = new DataSync(auth.fetch);
 let board;
 let userDataUrl;
 let oppWebId;

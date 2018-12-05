@@ -1,7 +1,7 @@
 const inquirer = require('inquirer');
 const SolidClient = require('../node_modules/@solid/cli/src/SolidClient');
 const IdentityManager = require('../node_modules/@solid/cli/src/IdentityManager');
-const Utils = require('../lib/utils');
+const Core = require('../lib/core');
 const { default: data } = require('@solid/query-ldflex');
 const {Loader} = require('semantic-chess');
 const readline = require('readline');
@@ -16,12 +16,13 @@ let userWebId;
 let oppWebId;
 let session;
 let client;
-let dataSync = new DataSync();
+let dataSync = new DataSync(fetch);
 let semanticGame = null;
 let userDataUrl;
 let intervalID;
 let currentPrompt;
 let gamesToJoin = [];
+const core = new Core(fetch);
 
 showBanner();
 showMainMenu();
@@ -111,7 +112,7 @@ async function showNewGameMenu() {
   const friends = {};
 
   for await (const friend of data[userWebId].friends) {
-    let name = await Utils.getFormattedName(friend);
+    let name = await core.getFormattedName(friend);
 
     friends[name] = friend.value;
   }
@@ -137,7 +138,7 @@ async function showNewGameMenu() {
     .then(async answers => {
       userDataUrl = answers['dataurl'];
       oppWebId = friends[answers['opponent']];
-      semanticGame = await Utils.setUpNewGame(userDataUrl, userWebId, oppWebId, null, answers['name'], dataSync, fetch);
+      semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, null, answers['name'], dataSync);
 
       showGame();
     });
@@ -145,7 +146,7 @@ async function showNewGameMenu() {
 
 async function showContinueGameMenu() {
   process.stdout.write('Loading your games...');
-  const games = await Utils.getGamesToContinue(userWebId);
+  const games = await core.getGamesToContinue(userWebId);
   const gamesMap = {};
 
   if (games.length > 0) {
@@ -161,7 +162,7 @@ async function showContinueGameMenu() {
 
       const loader = new Loader();
       const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
-      const oppName = await Utils.getFormattedName(oppWebId);
+      const oppName = await core.getFormattedName(oppWebId);
 
       game.oppWebId = oppWebId;
       game.oppName = oppName;
@@ -235,7 +236,7 @@ async function showJoinGameMenu(){
       const gameName = answers['join-game-menu'];
       const game = games[gameName];
 
-      semanticGame = await Utils.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, answers['dataurl'], dataSync, fetch);
+      semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, answers['dataurl'], dataSync);
       showGame();
     });
 }
@@ -274,7 +275,7 @@ function login() {
         session = await client.login(identityProvider, { username, password });
         userWebId = session.idClaims.sub;
         clearLine();
-        console.log(`Welcome ${await Utils.getFormattedName(userWebId)}!`);
+        console.log(`Welcome ${await core.getFormattedName(userWebId)}!`);
 
         showGameMenu();
       } catch(e) {
@@ -328,12 +329,12 @@ async function fetch(url, options = {method: 'GET'}) {
 
 async function checkForNotifications() {
   //console.log('checking...');
-  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId), fetch);
+  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
   //console.log(updates);
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    Utils.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, fetch, (san, url) => {
+    core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, fetch, (san, url) => {
       semanticGame.loadMove(san, {url});
 
       //readline.cursorTo(process.stdout, 0,-10);
@@ -351,14 +352,14 @@ async function checkForNotifications() {
 }
 
 async function checkForNewGamesToJoin() {
-  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId), fetch);
+  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
   //console.log(updates);
 
   for (const fileurl of updates) {
-    const gameToJoin = await Utils.getJoinRequest(fileurl, userWebId, fetch);
+    const gameToJoin = await core.getJoinRequest(fileurl, userWebId);
 
     if (gameToJoin) {
-      gamesToJoin.push(await Utils.processGameToJoin(gameToJoin, fileurl));
+      gamesToJoin.push(await core.processGameToJoin(gameToJoin, fileurl));
     }
   }
 }
@@ -392,10 +393,10 @@ function showUsersTurn() {
         }
 
         if (move) {
-          await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate, fetch);
+          await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
           if (move.notification) {
-            dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification, fetch);
+            dataSync.sendToOpponentsInbox(await core.getInboxUrl(oppWebId), move.notification);
           }
 
           printASCII();
