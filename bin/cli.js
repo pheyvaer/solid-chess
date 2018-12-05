@@ -22,7 +22,20 @@ let intervalID;
 let currentPrompt;
 let gamesToJoin = [];
 
+showBanner();
 showMainMenu();
+
+function showBanner() {
+  console.log(`
+   _____         _  _      _    _____  _                     
+  / ____|       | |(_)    | |  / ____|| |                    
+ | (___    ___  | | _   __| | | |     | |__    ___  ___  ___ 
+  \\___ \\  / _ \\ | || | / _\` | | |     | '_ \\  / _ \\/ __|/ __|
+  ____) || (_) || || || (_| | | |____ | | | ||  __/\\__ \\\\__ \\
+ |_____/  \\___/ |_||_| \\__,_|  \\_____||_| |_| \\___||___/|___/     
+                                                 
+`);
+}
 
 function showMainMenu() {
   inquirer
