@@ -1,10 +1,10 @@
 const Chessboard = require('./lib/chessboard');
-const {SemanticChess, Loader} = require('semantic-chess');
+const {Loader} = require('semantic-chess');
 const auth = require('solid-auth-client');
 const DataSync = require('./lib/datasync');
-const Utils = require('./lib/utils');
 const namespaces = require('./lib/namespaces');
 const { default: data } = require('@solid/query-ldflex');
+const Core = require('./lib/core');
 
 let userWebId;
 let semanticGame;
@@ -16,6 +16,7 @@ let gamesToJoin = [];
 let gameName;
 let refreshIntervalId;
 let selectedTheme = 'default';
+let core = new Core(auth.fetch);
 
 const fullColor = {
   'w': 'white',
@@ -107,7 +108,7 @@ async function setUpNewChessGame() {
   setUpForEveryGameOption();
 
   const startPosition = getNewGamePosition();
-  semanticGame = await Utils.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync);
+  semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync);
 
   setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -166,7 +167,7 @@ async function setUpBoard(semanticGame) {
     const res = await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
     if (move.notification) {
-      dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification);
+      dataSync.sendToOpponentsInbox(await core.getInboxUrl(oppWebId), move.notification);
     }
 
     updateStatus();
@@ -196,7 +197,7 @@ async function setUpBoard(semanticGame) {
   $('.black-3c85d').css('background-color', possibleThemes[selectedTheme].color.black);
   $('.white-1e1d7').css('background-color', possibleThemes[selectedTheme].color.white);
 
-  const oppName = await Utils.getFormattedName(oppWebId);
+  const oppName = await core.getFormattedName(oppWebId);
 
   $('#opponent-name').text(oppName);
 
@@ -218,7 +219,7 @@ auth.trackSession(async session => {
     $('#login-required').modal('hide');
 
     userWebId = session.webId;
-    const name = await Utils.getFormattedName(userWebId);
+    const name = await core.getFormattedName(userWebId);
 
     if (name) {
       $('#user-name').removeClass('hidden');
@@ -265,7 +266,7 @@ $('#new-btn').click(async () => {
     const $select = $('#possible-opps');
 
     for await (const friend of data[userWebId].friends) {
-        let name = await Utils.getFormattedName(friend.value);
+        let name = await core.getFormattedName(friend.value);
 
         $select.append(`<option value="${friend}">${name}</option>`);
     }
@@ -277,7 +278,7 @@ $('#new-btn').click(async () => {
 $('#start-new-game-btn').click(async () => {
   const dataUrl = $('#data-url').val();
 
-  if (await Utils.writePermission(dataUrl, dataSync)) {
+  if (await core.writePermission(dataUrl, dataSync)) {
     $('#new-game-options').addClass('hidden');
     oppWebId = $('#possible-opps').val();
     userDataUrl = dataUrl;
@@ -323,7 +324,7 @@ $('#join-game-btn').click(async () => {
   if ($('#join-data-url').val() !== userWebId) {
     userDataUrl = $('#join-data-url').val();
 
-    if (await Utils.writePermission(userDataUrl, dataSync)){
+    if (await core.writePermission(userDataUrl, dataSync)){
       $('#join-game-options').addClass('hidden');
       const gameUrl = $('#game-urls').val();
 
@@ -342,7 +343,7 @@ $('#join-game-btn').click(async () => {
 
       afterGameSpecificOptions();
       setUpForEveryGameOption();
-      semanticGame = await Utils.joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync);
+      semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync);
       setUpBoard(semanticGame);
       setUpAfterEveryGameOptionIsSetUp();
     } else {
@@ -362,7 +363,7 @@ $('#continue-btn').click(async () => {
     $tbody.empty();
     $('#continue-game-options').removeClass('hidden');
 
-    const games = await Utils.getGamesToContinue(userWebId);
+    const games = await core.getGamesToContinue(userWebId);
 
     $('#continue-looking').addClass('hidden');
 
@@ -381,7 +382,7 @@ $('#continue-btn').click(async () => {
 
         const loader = new Loader();
         const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
-        const oppName = await Utils.getFormattedName(oppWebId);
+        const oppName = await core.getFormattedName(oppWebId);
 
         const $row = $(`
           <tr data-game-url="${game.gameUrl}" class='clickable-row'>
@@ -417,7 +418,7 @@ $('#continue-btn').click(async () => {
 
 $('#continue-game-btn').click(async () => {
   $('#continue-game-options').addClass('hidden');
-  const games = await Utils.getGamesToContinue(userWebId);
+  const games = await core.getGamesToContinue(userWebId);
   const selectedGame = $('#continue-game-urls').val();
   let i = 0;
 
@@ -435,11 +436,12 @@ $('#continue-game-btn').click(async () => {
  * This method updates the status of the game in the UI.
  */
 function updateStatus() {
-  var statusEl = $('#status');
-  var status = '';
+  const statusEl = $('#status');
+  let status = '';
   const game = semanticGame.getChess();
 
-  var moveColor = 'White';
+  let moveColor = 'White';
+
   if (game.turn() === 'b') {
     moveColor = 'Black';
   }
@@ -476,28 +478,28 @@ function updateStatus() {
 async function checkForNotifications() {
   console.log('Checking for new notifications');
 
-  const updates = await dataSync.checkUserInboxForUpdates(await Utils.getInboxUrl(userWebId));
+  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    Utils.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
+    core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
       semanticGame.loadMove(san, {url});
       board.position(semanticGame.getChess().fen());
       updateStatus();
     });
 
     // check for acceptances of invitations
-    const response = await Utils.getResponseToInvitation(fileurl);
+    const response = await core.getResponseToInvitation(fileurl);
 
     if (response) {
       processResponseInNotification(response, fileurl);
     }
 
     // check for games to join
-    const gameToJoin = await Utils.getJoinRequest(fileurl, userWebId);
+    const gameToJoin = await core.getJoinRequest(fileurl, userWebId);
 
     if (gameToJoin) {
-      gamesToJoin.push(await Utils.processGameToJoin(gameToJoin, fileurl));
+      gamesToJoin.push(await core.processGameToJoin(gameToJoin, fileurl));
     }
   });
 }
@@ -514,7 +516,7 @@ async function processResponseInNotification(response, fileurl) {
   let gameName = await data[gameUrl.value].schema_name;
   const loader = new Loader();
   const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
-  const opponentsName = await Utils.getFormattedName(gameOppWebId);
+  const opponentsName = await core.getFormattedName(gameOppWebId);
 
   //show response in UI
   if (!gameName) {
@@ -542,17 +544,17 @@ async function processResponseInNotification(response, fileurl) {
   $('#invitation-response .modal-body').append(text);
   $('#invitation-response').modal('show');
 
-  dataSync.executeSPARQLUpdateForUser(await Utils.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
+  dataSync.executeSPARQLUpdateForUser(await core.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
     <${response.invitationUrl}> <${namespaces.schema}result> <${response.responseUrl}>}
   `);
   dataSync.deleteFileForUser(fileurl);
 }
 
 $('#clear-inbox-btn').click(async () => {
-  const resources = await dataSync.getAllResourcesInInbox(await Utils.getInboxUrl(userWebId));
+  const resources = await dataSync.getAllResourcesInInbox(await core.getInboxUrl(userWebId));
 
   resources.forEach(async r => {
-    if (await Utils.fileContainsChessInfo(r)) {
+    if (await core.fileContainsChessInfo(r)) {
       dataSync.deleteFileForUser(r);
     }
   });
