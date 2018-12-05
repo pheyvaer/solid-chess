@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Solid Chess</title>
+
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.2/css/all.css" integrity="sha384-/rXc/GQVaYpyDdyxK+ecHPVYJSN9bmVFBvjA/9eOB+pb3F2w2N6fc5qB9Ew5yIns" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/chessboard-0.3.0.min.css">
+    <link rel="stylesheet" href="css/main.css">
+  </head>
+  <body vocab="http://schema.org/">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <span class="navbar-brand"><i class="fas fa-chess"></i>&nbsp;&nbsp;Solid Chess</span>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="navbar-collapse collapse w-100 order-3 dual-collapse2" id="navbarSupportedContent">
+          <ul class="navbar-nav ml-auto">
+            <li><button id="nav-login-btn" class="login-btn hidden btn btn-dark my-2 my-sm-0" type="button">Log in</button></li>
+            <li id="user-menu" class="hidden nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-user"></i><span id='user-name' class="hidden"></span>
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <button id="theme-btn" class="dropdown-item btn btn-outline-success my-2 my-sm-0" type="button">Theme</button>
+                <button id="clear-inbox-btn" class="dropdown-item btn btn-outline-danger my-2 my-sm-0" type="button">Clear inbox <i class="fas fa-exclamation-triangle"></i></button>
+                <button id="logout-btn" class="dropdown-item btn btn-outline-success my-2 my-sm-0" type="button">Log out</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div id="content" class="row justify-content-center align-items-center">
+        <div id="game-options" class="col-6 text-center">
+          <button id="new-btn" type="button" class="btn btn-dark btn-lg"> New game</button>
+          <button id="join-btn" type="button" class="btn btn-dark btn-lg">Join game</button>
+          <button id="continue-btn" type="button" class="btn btn-dark btn-lg">Continue game</button>
+        </div>
+
+        <div id="new-game-options" class="col-6 hidden">
+          <form>
+            <div class="form-group">
+              <label for="game-name">Game name</label>
+              <input type="text" class="form-control rounded-0" id="game-name" placeholder="Enter the game's name">
+            </div>
+            <div class="form-group">
+              <label for="possible-opps">Your opponent</label>
+              <!-- <input type="text" class="form-control rounded-0" id="opp-webid" placeholder="Enter opponent's WebID" value="https://ph2.solid.community/profile/card#me"> -->
+              <select id="possible-opps"></select>
+            </div>
+            <div class="form-group">
+              <label for="data-url">Path on your POD to store the game</label>
+              <input type="text" class="form-control rounded-0" id="data-url" aria-describedby="pathHelp" placeholder="Enter path">
+              <small id="pathHelp" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. Data will be appended if the file exists.</small>
+            </div>
+            <div id="custom-position-chk-group" class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="custom-position-chk">
+              <label class="custom-control-label" for="custom-position-chk">Custom start position</label>
+            </div>
+            <div id="custom-position" class="form-group hidden">
+              <input type="text" class="form-control rounded-0" id="fen" aria-describedby="fenHelp" placeholder="Enter FEN" value="rnb2bnr/pppppppp/8/3q1k2/4P3/8/PPPPP1PP/RNBQKBNR b KQ - 0 1">
+              <small id="fenHelp" class="form-text">Forsyth–Edwards Notation (FEN) is a standard notation for describing a particular board position of a chess game. The purpose of FEN is to provide all the necessary information to restart a game from a particular position.</small>
+            </div>
+            <button id="start-new-game-btn" type="button" class="btn btn-dark">Start!</button>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+          </form>
+        </div>
+
+        <div id="join-game-options" class="col-6 hidden">
+          <div id='join-loading'>
+            <span id="join-looking">Looking for games to join...</span>
+            <span id="no-join" class="hidden">No games to join were found.</span>
+            <div class="form-group">
+              <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+            </div>
+          </div>
+          <form id="join-form" class="hidden">
+            <div class="form-group">
+              <label for="game-urls">Game you want to join</label>
+              <select id="game-urls"></select>
+            </div>
+            <div class="form-group">
+              <label for="join-data-url">Path on your POD to store the game</label>
+              <input type="text" class="form-control rounded-0" id="join-data-url" aria-describedby="pathHelp2" placeholder="Enter path">
+              <small id="pathHelp2" class="form-text">This is the path of the file on your Solid POD where your personal game data will be stored. Data will be appended if the file exists.</small>
+            </div>
+            <button id="join-game-btn" type="button" class="btn btn-dark">Join!</button>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+          </form>
+        </div>
+
+        <div id="continue-game-options" class="col-6 hidden">
+          <div id='continue-loading'>
+            <span id="continue-looking">Looking for games to continue...</span>
+            <span id="no-continue" class="hidden">No games to join were found.</span>
+            <div class="form-group">
+              <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+            </div>
+          </div>
+          <div id="continue-games" class="hidden">
+            <span>Select the game you want to continue</span>
+            <table id="continue-game-table" class="table table-hover">
+              <thead>
+                <tr>
+                  <th scope="col" id="table-title" >Title</th>
+                  <th scope="col">Opponent</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <button type="button" class="btn-cancel btn btn-dark">Cancel</button>
+          </div>
+        </div>
+
+        <div id='game-loading' class="hidden">
+          <span>Loading your game...</span>
+        </div>
+
+        <div id="game" class="hidden" >
+          <p>Name: <span id="name-of-the-game"></span></p>
+          <div id="board" style="width: 400px"></div>
+          <div id="game-details">
+            <p>Status: <span id="status"></span></p>
+            <p>Opponent: <span id="opponent-name"></span></p>
+          </div>
+          <button id="stop-playing" type="button" class="btn btn-dark">Stop</button>
+        </div>
+      </div>
+
+      <div id="how-it-works" class="row justify-content-center">
+        <div class="col-6" typeof="SoftwareApplication VideoGame" about="https://pheyvaer.github.io/solid-chess/">
+          <h3>How it works</h3>
+          <p class="text-justify">
+            <span property="name">Solid Chess</span> is a decentralized Chess app, build on top of <a href="https://solid.inrupt.com/" property="storageRequirements">Solid</a>.
+            No central sever is required to run or set up a game.
+            All personal data about the game is stored on your POD.
+            Requests to join and updates of a game are sent to the inbox of your opponent directly.
+          </p>
+
+          <p class="text-justify">
+            The source of this app can be found on <a href="https://github.com/pheyvaer/solid-chess" target="_blank">Github</a>.
+          </p>
+        </div>
+      </div>
+
+      <div class="modal fade" id="login-required" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Login required</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              Please login to play a game.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="login-btn btn btn-dark">Login</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="write-permission" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel2" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel2">Write permission required</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              You don't have write permission for <span id="write-permission-url"></span>.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="theme-selector" tabindex="-1" role="dialog" aria-labelledby="theme-selector-label" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="theme-selector-label">Select your theme</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="form-check">
+                <input type="radio" class="form-check-input" name="theme" id="classic-theme">
+                <label class="form-check-label" for="classic-theme">Classic</label>
+              </div>
+              <div class="form-check">
+                <input type="radio" class="form-check-input" name="theme" id="modern-theme">
+                <label class="form-check-label" for="modern-theme">Modern</label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+              <button id="save-theme-btn" type="button" class="btn btn-dark">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="invitation-response" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel3" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel3">Response to invitation</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/json3/3.3.2/json3.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="./dist/main.js"></script>
+  </body>
+</html>
