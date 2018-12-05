@@ -8,6 +8,9 @@
     "build": "webpack --config webpack.config.js",
     "doc": "./node_modules/.bin/jsdoc -c jsdoc.json ./lib"
   },
+  "bin": {
+    "solid-chess": "bin/cli.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pheyvaer/solid-chess.git"

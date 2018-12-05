@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const inquirer = require('inquirer');
 const SolidClient = require('../node_modules/@solid/cli/src/SolidClient');
 const IdentityManager = require('../node_modules/@solid/cli/src/IdentityManager');
