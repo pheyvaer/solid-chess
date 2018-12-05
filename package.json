@@ -37,6 +37,7 @@
     "solid-auth-client": "^2.2.10",
     "streamify-array": "^1.0.1",
     "uniqid": "^5.0.3",
-    "uri-js": "^4.2.2"
+    "uri-js": "^4.2.2",
+    "chess.js": "jhlywa/chess.js#master"
   }
 }

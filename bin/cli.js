@@ -10,6 +10,7 @@ const https = require('https');
 const Q = require('q');
 const URI = require('uri-js');
 const {format} = require('date-fns');
+const Chess = require('chess.js').Chess;
 
 let userWebId;
 let oppWebId;
@@ -99,6 +100,13 @@ function showGameMenu() {
     });
 }
 
+function getDefaultDataUrl(webId) {
+  const parsedWebId = URI.parse(webId);
+  const today = format(new Date(), 'yyyyMMdd');
+
+  return  `${parsedWebId.scheme}://${parsedWebId.host}/public/chess_${today}.ttl`;
+}
+
 async function showNewGameMenu() {
   const friends = {};
 
@@ -107,11 +115,6 @@ async function showNewGameMenu() {
 
     friends[name] = friend.value;
   }
-
-  const parsedWebId = URI.parse(userWebId);
-  const today = format(new Date(), 'yyyyMMdd');
-
-  const defaultDataurl = `${parsedWebId.scheme}://${parsedWebId.host}/public/chess_${today}.ttl`;
 
   inquirer
     .prompt([
@@ -128,7 +131,7 @@ async function showNewGameMenu() {
         name: 'dataurl',
         type: 'input',
         message: 'Where do you want to store the game data?',
-        'default': defaultDataurl
+        'default': getDefaultDataUrl(userWebId)
       }
     ])
     .then(async answers => {
@@ -199,7 +202,7 @@ async function showJoinGameMenu(){
 
   await checkForNewGamesToJoin();
 
-  const gameNames = [];
+  const games = {};
 
   gamesToJoin.forEach(game => {
     let name = game.name;
@@ -208,7 +211,7 @@ async function showJoinGameMenu(){
       name = game.gameUrl;
     }
 
-    gameNames.push(`${name} (${game.opponentsName})`);
+    games[`${name} (${game.opponentsName})`] = game;
   });
 
   clearLine();
@@ -219,13 +222,21 @@ async function showJoinGameMenu(){
         name: 'join-game-menu',
         type: 'list',
         message: 'Which game do you want to join?',
-        choices: gameNames,
+        choices: Object.keys(games),
         'default': 0
+      }, {
+        name: 'dataurl',
+        type: 'input',
+        message: 'Where do you want to store the game data?',
+        'default': getDefaultDataUrl(userWebId)
       }
     ])
     .then(async answers => {
       const gameName = answers['join-game-menu'];
-      console.log(gameName);
+      const game = games[gameName];
+
+      semanticGame = await Utils.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, answers['dataurl'], dataSync, fetch);
+      showGame();
     });
 }
 
@@ -327,7 +338,7 @@ async function checkForNotifications() {
 
       //readline.cursorTo(process.stdout, 0,-10);
 
-      console.log(semanticGame.getChess().ascii());
+      printASCII();
 
       if (semanticGame.isOpponentsTurn()) {
         showOpponentsTurn();
@@ -387,7 +398,7 @@ function showUsersTurn() {
             dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(oppWebId), move.notification, fetch);
           }
 
-          console.log(semanticGame.getChess().ascii());
+          printASCII();
           showOpponentsTurn();
         } else {
           console.log('🚫 Incorrect move. Try again.');
@@ -463,11 +474,49 @@ async function loadAndShowGame(gameUrl, storeUrl) {
 }
 
 function showGame() {
-  console.log(semanticGame.getChess().ascii());
+  printASCII();
 
   if (semanticGame.isOpponentsTurn()) {
     showOpponentsTurn();
   } else {
     showUsersTurn();
+  }
+}
+
+function printASCII() {
+  if (semanticGame.getUserColor() === 'w') {
+    console.log(semanticGame.getChess().ascii());
+  } else {
+    const board = new Chess(semanticGame.getChess().fen()).board();
+
+    process.stdout.write(`   +------------------------+\n`);
+    for (let i = board.length - 1; i >= 0; i --) {
+      for (let j = board[i].length - 1; j >= 0; j --) {
+        if (j === board[i].length - 1) {
+          process.stdout.write(` ${board.length - i} |`);
+        }
+
+        const square = board[i][j];
+
+        if (square) {
+          let piece = square.type;
+
+          if (square.color === 'w') {
+            piece = piece.toUpperCase();
+          }
+
+          process.stdout.write(` ${piece} `);
+        } else {
+          process.stdout.write(' . ');
+        }
+
+        if (j === 0) {
+          process.stdout.write(`|\n`);
+        }
+      }
+    }
+
+    process.stdout.write(`   +------------------------+\n`);
+    process.stdout.write(`     h  g  f  e  d  c  b  a\n`);
   }
 }

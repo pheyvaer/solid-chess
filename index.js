@@ -114,33 +114,6 @@ async function setUpNewChessGame() {
 }
 
 /**
- * This method joins the player with a game.
- * @param gameUrl: the url of the game to join.
- * @param invitationUrl: the url of the invitation that we accept.
- * @param opponentWebId: the WebId of the opponent of the game, sender of the invitation.
- * @returns {Promise<void>}
- */
-async function joinExistingChessGame(gameUrl, invitationUrl, opponentWebId) {
-  setUpForEveryGameOption();
-  const loader = new Loader();
-  semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
-  oppWebId = opponentWebId;
-  const response = await Utils.generateResponseToInvitation(userDataUrl, invitationUrl, userWebId, oppWebId, "yes");
-
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {
-  <${gameUrl}> a <${namespaces.chess}ChessGame>;
-    <${namespaces.storage}storeIn> <${userDataUrl}>.
-    
-    ${response.sparqlUpdate}
-  }`);
-  dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { <${gameUrl}> <${namespaces.schema}contributor> <${userWebId}>; <${namespaces.storage}storeIn> <${userDataUrl}>.}`);
-  dataSync.sendToOpponentsInbox(await Utils.getInboxUrl(opponentWebId), response.notification);
-
-  setUpBoard(semanticGame);
-  setUpAfterEveryGameOptionIsSetUp();
-}
-
-/**
  * This method lets a player continue an existing chess game.
  * @param gameUrl: the url of the game to continue.
  * @returns {Promise<void>}
@@ -368,7 +341,10 @@ $('#join-game-btn').click(async () => {
       dataSync.deleteFileForUser(game.fileUrl);
 
       afterGameSpecificOptions();
-      joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId);
+      setUpForEveryGameOption();
+      semanticGame = await Utils.joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync);
+      setUpBoard(semanticGame);
+      setUpAfterEveryGameOptionIsSetUp();
     } else {
       $('#write-permission-url').text(userDataUrl);
       $('#write-permission').modal('show');
