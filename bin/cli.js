@@ -4,7 +4,7 @@ const inquirer = require('inquirer');
 const SolidClient = require('../node_modules/@solid/cli/src/SolidClient');
 const IdentityManager = require('../node_modules/@solid/cli/src/IdentityManager');
 const Core = require('../lib/core');
-const { default: data } = require('@solid/query-ldflex');
+const namespaces = require('../lib/namespaces');
 const {Loader} = require('semantic-chess');
 const readline = require('readline');
 const DataSync = require('../lib/datasync');
@@ -113,8 +113,10 @@ function getDefaultDataUrl(webId) {
 async function showNewGameMenu() {
   const friends = {};
 
-  for await (const friend of data[userWebId].friends) {
-    let name = await core.getFormattedName(friend);
+  const allFriends = core.getObjectFromPredicateForResource(userWebId, namespaces.foaf + 'know');
+
+  for (const friend of allFriends) {
+    let name = await core.getFormattedName(friend.value);
 
     friends[name] = friend.value;
   }
@@ -154,7 +156,7 @@ async function showContinueGameMenu() {
   if (games.length > 0) {
 
     for (const game of games) {
-      let name = await data[game.gameUrl]['http://schema.org/name'];
+      let name = await core.getObjectFromPredicateForResource(game.gameUrl, namespaces.schema + 'name');
 
       if (!name) {
         name = game.gameUrl;
@@ -162,8 +164,7 @@ async function showContinueGameMenu() {
         name = name.value;
       }
 
-      const loader = new Loader();
-      const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
+      const oppWebId = await core.findWebIdOfOpponent(game.gameUrl, userWebId);
       const oppName = await core.getFormattedName(oppWebId);
 
       game.oppWebId = oppWebId;
