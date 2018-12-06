@@ -469,7 +469,7 @@ function quitGame() {
 }
 
 async function loadAndShowGame(gameUrl, storeUrl) {
-  const loader = new Loader();
+  const loader = new Loader(fetch);
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, storeUrl);
   oppWebId = semanticGame.getOpponentWebId();
   userDataUrl = storeUrl;
