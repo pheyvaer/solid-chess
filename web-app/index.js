@@ -478,7 +478,7 @@ function updateStatus() {
 async function checkForNotifications() {
   console.log('Checking for new notifications');
 
-  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
+  const updates = await core.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
 
   updates.forEach(async (fileurl) => {
     // check for new moves
@@ -551,7 +551,7 @@ async function processResponseInNotification(response, fileurl) {
 }
 
 $('#clear-inbox-btn').click(async () => {
-  const resources = await dataSync.getAllResourcesInInbox(await core.getInboxUrl(userWebId));
+  const resources = await core.getAllResourcesInInbox(await core.getInboxUrl(userWebId));
 
   resources.forEach(async r => {
     if (await core.fileContainsChessInfo(r)) {

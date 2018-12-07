@@ -164,7 +164,8 @@ async function showContinueGameMenu() {
         name = name.value;
       }
 
-      const oppWebId = await core.findWebIdOfOpponent(game.gameUrl, userWebId);
+      const loader = new Loader(fetch);
+      const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
       const oppName = await core.getFormattedName(oppWebId);
 
       game.oppWebId = oppWebId;
@@ -332,7 +333,7 @@ async function fetch(url, options = {method: 'GET'}) {
 
 async function checkForNotifications() {
   //console.log('checking...');
-  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
+  const updates = await core.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
   //console.log(updates);
 
   updates.forEach(async (fileurl) => {
@@ -355,7 +356,7 @@ async function checkForNotifications() {
 }
 
 async function checkForNewGamesToJoin() {
-  const updates = await dataSync.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
+  const updates = await core.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
   //console.log(updates);
 
   for (const fileurl of updates) {
