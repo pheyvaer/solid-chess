@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+### [0.1.0] - 2018-12-xx
+
+### Added
+
+- CLI to play the chess game
+- add CLI documentation to README and index
+- `core.js` to replace `utils.js`
+
+### Fixed
+
+- clean up DataSync
+- fix that log-in button still shown after logging in
+
+### Removed
+
+- `utils.js` replaced by `core.js`
+
 ### [0.0.7] - 2018-11-24
 
 ### Added
@@ -66,6 +83,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - use [semantic-chess](https://github.com/pheyvaer/semantic-chess-js), which replaces the local semantic chess code
 
+[0.1.0]: https://github.com/pheyvaer/solid-chess/compare/v0.0.7...v0.1.0
 [0.0.7]: https://github.com/pheyvaer/solid-chess/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/pheyvaer/solid-chess/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/pheyvaer/solid-chess/compare/v0.0.4...v0.0.5

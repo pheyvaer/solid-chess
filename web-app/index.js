@@ -216,6 +216,7 @@ auth.trackSession(async session => {
 
   if (loggedIn) {
     $('#user-menu').removeClass('hidden');
+    $('#nav-login-btn').addClass('hidden');
     $('#login-required').modal('hide');
 
     userWebId = session.webId;
