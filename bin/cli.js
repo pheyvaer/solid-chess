@@ -112,8 +112,7 @@ function getDefaultDataUrl(webId) {
 
 async function showNewGameMenu() {
   const friends = {};
-
-  const allFriends = core.getObjectFromPredicateForResource(userWebId, namespaces.foaf + 'know');
+  const allFriends = await core.getAllObjectsFromPredicateForResource(userWebId, namespaces.foaf + 'knows');
 
   for (const friend of allFriends) {
     let name = await core.getFormattedName(friend.value);
@@ -221,28 +220,46 @@ async function showJoinGameMenu(){
 
   clearLine();
 
-  inquirer
-    .prompt([
-      {
-        name: 'join-game-menu',
-        type: 'list',
-        message: 'Which game do you want to join?',
-        choices: Object.keys(games),
-        'default': 0
-      }, {
-        name: 'dataurl',
-        type: 'input',
-        message: 'Where do you want to store the game data?',
-        'default': getDefaultDataUrl(userWebId)
-      }
-    ])
-    .then(async answers => {
-      const gameName = answers['join-game-menu'];
-      const game = games[gameName];
+  if (Object.keys(games).length > 0) {
+    games['(Go back)'] = '';
 
-      semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, answers['dataurl'], dataSync);
-      showGame();
-    });
+    inquirer
+      .prompt([
+        {
+          name: 'join-game-menu',
+          type: 'list',
+          message: 'Which game do you want to join?',
+          choices: Object.keys(games),
+          'default': 0
+        }
+      ])
+      .then(async answers => {
+        const gameName = answers['join-game-menu'];
+        if (gameName !== '(Go back)') {
+          const game = games[gameName];
+
+          inquirer
+            .prompt([
+              {
+                name: 'dataurl',
+                type: 'input',
+                message: 'Where do you want to store the game data?',
+                'default': getDefaultDataUrl(userWebId)
+              }
+            ])
+            .then(async answers => {
+              userDataUrl = answers['dataurl'];
+              semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
+              showGame();
+            });
+        } else {
+          showGameMenu();
+        }
+      });
+  } else {
+    console.log('Sorry, no new games were found.');
+    showGameMenu();
+  }
 }
 
 function clearLine() {
@@ -338,7 +355,7 @@ async function checkForNotifications() {
 
   updates.forEach(async (fileurl) => {
     // check for new moves
-    core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, fetch, (san, url) => {
+    core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
       semanticGame.loadMove(san, {url});
 
       //readline.cursorTo(process.stdout, 0,-10);
@@ -416,7 +433,7 @@ function showUsersTurn() {
 }
 
 function showOpponentsTurn() {
-  console.log('Waiting for opponent... ☕️ (Press ESC to quit.)');
+  console.log('Waiting for opponent... ☕️  (Press ESC to quit.)');
   listenForEscape();
   intervalID = setInterval(checkForNotifications, 5000);
 }
