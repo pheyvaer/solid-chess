@@ -25,7 +25,7 @@ const fullColor = {
 const possibleThemes = {
   default: {
     name: 'Classic',
-    pieceTheme: 'img/chesspieces/wikipedia/{piece}.png',
+    pieceTheme: 'web-app/img/chesspieces/wikipedia/{piece}.png',
     color: {
       black: '#b58863',
       white: '#f0d9b5'
@@ -33,7 +33,7 @@ const possibleThemes = {
   },
   modern: {
     name: 'Modern',
-    pieceTheme: 'img/chesspieces/freevector/{piece}.png',
+    pieceTheme: 'web-app/img/chesspieces/freevector/{piece}.png',
     color: {
       black: 'deepskyblue',
       white: 'lightskyblue'
@@ -42,7 +42,7 @@ const possibleThemes = {
 };
 
 $('.login-btn').click(() => {
-  auth.popupLogin({ popupUri: 'popup.html' });
+  auth.popupLogin({ popupUri: 'web-app/popup.html' });
 });
 
 $('#logout-btn').click(() => {
@@ -121,7 +121,7 @@ async function setUpNewChessGame() {
  */
 async function continueExistingChessGame(gameUrl) {
   setUpForEveryGameOption();
-  const loader = new Loader();
+  const loader = new Loader(auth.fetch);
   semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
   oppWebId = semanticGame.getOpponentWebId();
 
@@ -380,7 +380,7 @@ $('#continue-btn').click(async () => {
           name = name.value;
         }
 
-        const loader = new Loader();
+        const loader = new Loader(auth.fetch);
         const oppWebId = await loader.findWebIdOfOpponent(game.gameUrl, userWebId);
         const oppName = await core.getFormattedName(oppWebId);
 
@@ -514,7 +514,7 @@ async function processResponseInNotification(response, fileurl) {
   const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
   const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
   let gameName = await data[gameUrl.value].schema_name;
-  const loader = new Loader();
+  const loader = new Loader(auth.fetch);
   const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
   const opponentsName = await core.getFormattedName(gameOppWebId);
 

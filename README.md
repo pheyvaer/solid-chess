@@ -1,11 +1,12 @@
 # Solid Chess
 
-This is a decentralized Chess app, build on top of [Solid](https://solid.inrupt.com/).
+This is a decentralized Chess game, build on top of [Solid](https://solid.inrupt.com/).
 No central sever is required to run or set up a game.
 All personal data about the game is stored on your POD.
 Requests to join and updates of a game are sent to the inbox of your opponent directly.
 
-Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screencast](https://streamable.com/tf8yv).
+The game is available in the [browser](#browser) and [terminal](#cli).
+Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screencast](https://streamable.com/tf8yv) of the Web app.
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
 
@@ -32,11 +33,19 @@ WARNING: The "Clear inbox" button **removes all files with (chess) game data** i
 
 ## Install
 
+### Web app
+
 You can run the game locally by doing the following:
 - Clone this repo.
 - `npm i`: install Node.js dependencies.
-- `npm run build`: bundle the JavaScript via Webpack. The result can be found in `dist/main.js`.
+- `npm run build:web`: bundle the JavaScript via Webpack. 
+The result can be found in `dist/main.js`.
 - Serve the contents of the folder, e.g., via `http-server`.
+
+### CLI
+
+- `npm i solid-chess -g`: install the game.
+- `solid-chess`:launch the game.
 
 ## Credits
 
