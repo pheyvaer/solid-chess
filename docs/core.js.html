@@ -46,6 +46,8 @@ const namespaces = require('./namespaces');
 const uniqid = require('uniqid');
 const {SemanticChess, Loader} = require('semantic-chess');
 const winston = require('winston');
+const URI = require('uri-js');
+const {format} = require('date-fns');
 
 class SolidChessCore {
 
@@ -310,7 +312,7 @@ class SolidChessCore {
               deferred.resolve(null);
             }
 
-            const loader = new Loader(fetch);
+            const loader = new Loader(self.fetch);
             const opponentWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
 
             deferred.resolve({
@@ -414,7 +416,7 @@ class SolidChessCore {
       // TODO: check if there are any triples at all.
       while (d) {
         url = baseurl + '#' + uniqid();
-        d = this.getObjectFromPredicateForResource(url, namespaces.rdf + 'type');
+        d = await this.getObjectFromPredicateForResource(url, namespaces.rdf + 'type');
       }
     } catch (e) {
       // this means that response of data[url] returns a 404
@@ -735,10 +737,15 @@ class SolidChessCore {
 
   /**
    * This method checks for new moves in a notification.
+   * @param semanticGame: the current semantic game being used
+   * @param userWebId: the WebId of the current user
    * @param fileurl: the url of file that contains the notification.
+   * @param userDataUrl: the url where the new data is stored for the game
+   * @param dataSync: the DataSync instance used to save that to the POD
+   * @param callback: the function with as parameters the san and url of the next move that is called at the end of this method
    * @returns {Promise&lt;void>}
    */
-  async checkForNewMove(semanticGame = null, userWebId, fileurl, userDataUrl, dataSync, fetch, callback) {
+  async checkForNewMove(semanticGame = null, userWebId, fileurl, userDataUrl, dataSync, callback) {
     const originalMove = await this.getOriginalHalfMove(fileurl);
 
     if (originalMove) {
@@ -758,11 +765,10 @@ class SolidChessCore {
         let gameStorageUrl;
 
         if (!game || game.getUrl() !== gameUrl) {
-          gameStorageUrl = await
-          this.getStorageForGame(userWebId, gameUrl);
+          gameStorageUrl = await this.getStorageForGame(userWebId, gameUrl);
 
           if (gameStorageUrl) {
-            const loader = new Loader(fetch);
+            const loader = new Loader(this.fetch);
             game = await
             loader.loadFromUrl(gameUrl, userWebId, gameStorageUrl);
           } else {
@@ -779,17 +785,17 @@ class SolidChessCore {
 
           if (lastMoveUrl) {
             const r = await
-              this.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl(), fetch);
+              this.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
             nextMoveUrl = r.move;
             endsGame = r.endsGame;
           } else {
             nextMoveUrl = await
-              this.getFirstHalfMove(fileurl, game.getUrl(), fetch);
+              this.getFirstHalfMove(fileurl, game.getUrl());
           }
 
           if (nextMoveUrl) {
             this.logger.debug(nextMoveUrl);
-            dataSync.deleteFileForUser(fileurl, fetch);
+            dataSync.deleteFileForUser(fileurl);
 
             if (lastMoveUrl) {
               let update = `INSERT DATA {
@@ -802,11 +808,11 @@ class SolidChessCore {
 
               update += '}';
 
-              dataSync.executeSPARQLUpdateForUser(gameStorageUrl, update, fetch);
+              dataSync.executeSPARQLUpdateForUser(gameStorageUrl, update);
             } else {
               dataSync.executeSPARQLUpdateForUser(gameStorageUrl, `INSERT DATA {
               &lt;${game.getUrl()}> &lt;${namespaces.chess}hasFirstHalfMove> &lt;${nextMoveUrl}>.
-            }`, fetch);
+            }`);
             }
 
             if (semanticGame &amp;&amp; game.getUrl() === semanticGame.getUrl()) {
@@ -829,12 +835,22 @@ class SolidChessCore {
           }
         }
       } else {
-        console.error(`No game was found for the notification about move "${originalMove}". Ignoring notification in ${fileurl}.`);
+        this.logger.warn(`No game was found for the notification about move "${originalMove}". Ignoring notification in ${fileurl}.`);
         //TODO throw error
       }
     }
   }
 
+  /**
+   * This method sets up a new game.
+   * @param userDataUrl: the url of the file where the data is stored
+   * @param userWebId: the WebId of the current user
+   * @param opponentWebId: the WebId of the opponent
+   * @param startPosition: the FEN of the start position of the chess board
+   * @param name: the name of the game
+   * @param dataSync: the DataSync instance used to write data
+   * @returns {SemanticChess}: the newly created chess game
+   */
   async setUpNewGame(userDataUrl, userWebId, opponentWebId, startPosition, name, dataSync) {
     const gameUrl = await this.generateUniqueUrlForResource(userDataUrl);
     const semanticGame = new SemanticChess({
@@ -847,10 +863,33 @@ class SolidChessCore {
     });
     const invitation = await this.generateInvitation(userDataUrl, semanticGame.getUrl(), userWebId, opponentWebId);
 
-    dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n &lt;${gameUrl}> &lt;${namespaces.storage}storeIn> &lt;${userDataUrl}>}`);
-    dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { &lt;${gameUrl}> &lt;${namespaces.schema}contributor> &lt;${userWebId}>; &lt;${namespaces.storage}storeIn> &lt;${userDataUrl}>.}`);
-    dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${invitation.sparqlUpdate}}`);
-    dataSync.sendToOpponentsInbox(await this.getInboxUrl(opponentWebId), invitation.notification);
+    try {
+      await dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${semanticGame.getMinimumRDF()} \n &lt;${gameUrl}> &lt;${namespaces.storage}storeIn> &lt;${userDataUrl}>}`);
+    } catch (e) {
+      this.logger.error(`Could not save new game data.`);
+      this.logger.error(e);
+    }
+
+    try {
+      await dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { &lt;${gameUrl}> &lt;${namespaces.schema}contributor> &lt;${userWebId}>; &lt;${namespaces.storage}storeIn> &lt;${userDataUrl}>.}`);
+    } catch (e) {
+      this.logger.error(`Could not add chess game to WebId.`);
+      this.logger.error(e);
+    }
+
+    try {
+      await dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA {${invitation.sparqlUpdate}}`);
+    } catch (e) {
+      this.logger.error(`Could not save invitation for game.`);
+      this.logger.error(e);
+    }
+
+    try {
+      await dataSync.sendToOpponentsInbox(await this.getInboxUrl(opponentWebId), invitation.notification);
+    } catch (e) {
+      this.logger.error(`Could not send invitation to opponent.`);
+      this.logger.error(e);
+    }
 
     return semanticGame;
   }
@@ -879,10 +918,14 @@ class SolidChessCore {
    * @param gameUrl: the url of the game to join.
    * @param invitationUrl: the url of the invitation that we accept.
    * @param opponentWebId: the WebId of the opponent of the game, sender of the invitation.
+   * @param userWebId: the WebId of the current user
+   * @param userDataUrl: the url of the file where the data is stored
+   * @param dataSync: the DataSync instance used to write data to the POD
+   * @param fileUrl: the url of the file that contains the notification about the game
    * @returns {Promise&lt;void>}
    */
-  async joinExistingChessGame(gameUrl, invitationUrl, opponentWebId, userWebId, userDataUrl, dataSync) {
-    const loader = new Loader(fetch);
+  async joinExistingChessGame(gameUrl, invitationUrl, opponentWebId, userWebId, userDataUrl, dataSync, fileUrl) {
+    const loader = new Loader(this.fetch);
     const semanticGame = await loader.loadFromUrl(gameUrl, userWebId, userDataUrl);
     const response = await this.generateResponseToInvitation(userDataUrl, invitationUrl, userWebId, opponentWebId, "yes");
 
@@ -894,6 +937,7 @@ class SolidChessCore {
   }`);
     dataSync.executeSPARQLUpdateForUser(userWebId, `INSERT DATA { &lt;${gameUrl}> &lt;${namespaces.schema}contributor> &lt;${userWebId}>; &lt;${namespaces.storage}storeIn> &lt;${userDataUrl}>.}`);
     dataSync.sendToOpponentsInbox(await this.getInboxUrl(opponentWebId), response.notification);
+    dataSync.deleteFileForUser(fileUrl);
 
     return semanticGame;
   }
@@ -965,6 +1009,13 @@ class SolidChessCore {
 
     return deferred.promise;
   }
+
+  getDefaultDataUrl(webId) {
+    const parsedWebId = URI.parse(webId);
+    const today = format(new Date(), 'yyyyMMdd');
+
+    return  `${parsedWebId.scheme}://${parsedWebId.host}/public/chess_${today}.ttl`;
+  }
 }
 
 module.exports = SolidChessCore;
@@ -980,7 +1031,7 @@ module.exports = SolidChessCore;
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Fri Dec 07 2018 20:13:11 GMT+0100 (Central European Standard Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sat Dec 08 2018 12:15:59 GMT+0100 (Central European Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
