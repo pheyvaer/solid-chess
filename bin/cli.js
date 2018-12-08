@@ -60,10 +60,14 @@ function showMainMenu() {
           login();
           break;
         case 'How it works':
-          console.log(`\nThis is a decentralized Chess app, build on top of [Solid](https://solid.inrupt.com/).
+          console.log(`\nThis is a decentralized Chess game, build on top of Solid [1].
 No central sever is required to run or set up a game.
 All personal data about the game is stored on your POD.
-Requests to join and updates of a game are sent to the inbox of your opponent directly.\n`);
+Requests to join and updates of a game are sent to the inbox of your opponent directly.
+You can play the game both in your terminal and browser [2].
+
+[1] https://solid.inrupt.com/
+[2] https://pheyvaer.github.io/solid-chess\n`);
           showMainMenu();
           break;
         case 'Quit':
@@ -131,7 +135,23 @@ async function showNewGameMenu() {
         type: 'list',
         message: 'Who is your opponent',
         choices: Object.keys(friends)
-      }, {
+      }
+    ])
+    .then(async answers => {
+      oppWebId = friends[answers['opponent']];
+
+      askForDataUrl(async url => {
+        userDataUrl = url;
+        semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, null, answers['name'], dataSync);
+
+        showGame();
+      });
+    });
+}
+
+function askForDataUrl(callback) {
+  inquirer
+    .prompt([{
         name: 'dataurl',
         type: 'input',
         message: 'Where do you want to store the game data?',
@@ -139,11 +159,13 @@ async function showNewGameMenu() {
       }
     ])
     .then(async answers => {
-      userDataUrl = answers['dataurl'];
-      oppWebId = friends[answers['opponent']];
-      semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, null, answers['name'], dataSync);
-
-      showGame();
+      const url = answers['dataurl'];
+      if (core.writePermission(url, dataSync)) {
+        callback(url);
+      } else {
+        console.log('🚫 You don\' have access to this file. Please provide another url.');
+        askForDataUrl(callback);
+      }
     });
 }
 
@@ -238,20 +260,11 @@ async function showJoinGameMenu(){
         if (gameName !== '(Go back)') {
           const game = games[gameName];
 
-          inquirer
-            .prompt([
-              {
-                name: 'dataurl',
-                type: 'input',
-                message: 'Where do you want to store the game data?',
-                'default': getDefaultDataUrl(userWebId)
-              }
-            ])
-            .then(async answers => {
-              userDataUrl = answers['dataurl'];
-              semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
-              showGame();
-            });
+          askForDataUrl(async url => {
+            userDataUrl = url;
+            semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
+            showGame();
+          });
         } else {
           showGameMenu();
         }
@@ -539,6 +552,6 @@ function printASCII() {
     }
 
     process.stdout.write(`   +------------------------+\n`);
-    process.stdout.write(`     h  g  f  e  d  c  b  a\n`);
+    process.stdout.write(`     h  g  f  e  d  c  b  a\n\n`);
   }
 }
