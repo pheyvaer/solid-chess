@@ -482,25 +482,29 @@ async function checkForNotifications() {
   const updates = await core.checkUserInboxForUpdates(await core.getInboxUrl(userWebId));
 
   updates.forEach(async (fileurl) => {
+    let newMoveFound = false;
     // check for new moves
-    core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
+    await core.checkForNewMove(semanticGame, userWebId, fileurl, userDataUrl, dataSync, (san, url) => {
       semanticGame.loadMove(san, {url});
       board.position(semanticGame.getChess().fen());
       updateStatus();
+      newMoveFound = true;
     });
 
-    // check for acceptances of invitations
-    const response = await core.getResponseToInvitation(fileurl);
+    if (!newMoveFound) {
+      // check for acceptances of invitations
+      const response = await core.getResponseToInvitation(fileurl);
 
-    if (response) {
-      processResponseInNotification(response, fileurl);
-    }
+      if (response) {
+        processResponseInNotification(response, fileurl);
+      } else {
+        // check for games to join
+        const gameToJoin = await core.getJoinRequest(fileurl, userWebId);
 
-    // check for games to join
-    const gameToJoin = await core.getJoinRequest(fileurl, userWebId);
-
-    if (gameToJoin) {
-      gamesToJoin.push(await core.processGameToJoin(gameToJoin, fileurl));
+        if (gameToJoin) {
+          gamesToJoin.push(await core.processGameToJoin(gameToJoin, fileurl));
+        }
+      }
     }
   });
 }
@@ -512,11 +516,12 @@ async function checkForNotifications() {
  * @returns {Promise<void>}
  */
 async function processResponseInNotification(response, fileurl) {
-  const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
-  const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
+  const rsvpResponse = await core.getObjectFromPredicateForResource(response.responseUrl, namespaces.schema + 'rsvpResponse');
+  let gameUrl = await core.getObjectFromPredicateForResource(response.invitationUrl, namespaces.schema + 'event');
 
   if (gameUrl) {
-    let gameName = await data[gameUrl.value].schema_name;
+    gameUrl = gameUrl.value;
+    let gameName = await data[gameUrl].schema_name;
     const loader = new Loader(auth.fetch);
     const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
     const opponentsName = await core.getFormattedName(gameOppWebId);

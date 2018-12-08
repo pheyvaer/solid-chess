@@ -253,7 +253,8 @@ async function showJoinGameMenu(){
 
           askForDataUrl(async url => {
             userDataUrl = url;
-            semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
+            oppWebId = game.opponentWebId;
+            semanticGame = await core.joinExistingChessGame(game.gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
             showGame();
           });
         } else {
