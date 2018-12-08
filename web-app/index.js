@@ -42,7 +42,7 @@ const possibleThemes = {
 };
 
 $('.login-btn').click(() => {
-  auth.popupLogin({ popupUri: 'web-app/popup.html' });
+  auth.popupLogin({ popupUri: 'popup.html' });
 });
 
 $('#logout-btn').click(() => {
@@ -262,7 +262,7 @@ $('#new-btn').click(async () => {
   if (userWebId) {
     afterGameOption();
     $('#new-game-options').removeClass('hidden');
-    $('#data-url').prop('value', 'https://ph_test.solid.community/public/chess.ttl');
+    $('#data-url').prop('value', core.getDefaultDataUrl(userWebId));
 
     const $select = $('#possible-opps');
 
@@ -296,13 +296,14 @@ $('#join-btn').click(async () => {
   if (userWebId) {
     afterGameOption();
     $('#join-game-options').removeClass('hidden');
-    $('#join-data-url').prop('value', 'https://ph2.solid.community/public/chess.ttl');
+    $('#join-data-url').prop('value', core.getDefaultDataUrl(userWebId));
     $('#join-looking').addClass('hidden');
 
     if (gamesToJoin.length > 0) {
       $('#join-loading').addClass('hidden');
       $('#join-form').removeClass('hidden');
       const $select = $('#game-urls');
+      $select.empty();
 
       gamesToJoin.forEach(game => {
         let name = game.name;
@@ -339,12 +340,11 @@ $('#join-game-btn').click(async () => {
 
       // remove it from the array so it's no longer shown in the UI
       gamesToJoin.splice(i, 1);
-      // remove it from the inbox so it's longer loaded when the app is reloaded
-      dataSync.deleteFileForUser(game.fileUrl);
 
       afterGameSpecificOptions();
       setUpForEveryGameOption();
-      semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, game.opponentWebId, userWebId, userDataUrl, dataSync);
+      oppWebId = game.opponentWebId;
+      semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
       setUpBoard(semanticGame);
       setUpAfterEveryGameOptionIsSetUp();
     } else {
@@ -514,41 +514,46 @@ async function checkForNotifications() {
 async function processResponseInNotification(response, fileurl) {
   const rsvpResponse = await data[response.responseUrl][namespaces.schema + 'rsvpResponse'];
   const gameUrl = await data[response.invitationUrl][namespaces.schema + 'event'];
-  let gameName = await data[gameUrl.value].schema_name;
-  const loader = new Loader(auth.fetch);
-  const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
-  const opponentsName = await core.getFormattedName(gameOppWebId);
 
-  //show response in UI
-  if (!gameName) {
-    gameName = gameUrl;
-  } else {
-    gameName = gameName.value;
-  }
+  if (gameUrl) {
+    let gameName = await data[gameUrl.value].schema_name;
+    const loader = new Loader(auth.fetch);
+    const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
+    const opponentsName = await core.getFormattedName(gameOppWebId);
 
-  let text;
+    //show response in UI
+    if (!gameName) {
+      gameName = gameUrl;
+    } else {
+      gameName = gameName.value;
+    }
 
-  if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
-    text = `${opponentsName} accepted your invitation to join "${gameName}"!`;
-  } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
-    text = `${opponentsName} refused your invitation to join ${gameName}...`;
-  }
+    let text;
 
-  if (!$('#invitation-response').is(':visible')) {
-    $('#invitation-response .modal-body').empty();
-  }
+    if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
+      text = `${opponentsName} accepted your invitation to join "${gameName}"!`;
+    } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
+      text = `${opponentsName} refused your invitation to join ${gameName}...`;
+    }
 
-  if ($('#invitation-response .modal-body').text() !== '') {
-    $('#invitation-response .modal-body').append('<br/>');
-  }
+    if (!$('#invitation-response').is(':visible')) {
+      $('#invitation-response .modal-body').empty();
+    }
 
-  $('#invitation-response .modal-body').append(text);
-  $('#invitation-response').modal('show');
+    if ($('#invitation-response .modal-body').text() !== '') {
+      $('#invitation-response .modal-body').append('<br/>');
+    }
 
-  dataSync.executeSPARQLUpdateForUser(await core.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
+    $('#invitation-response .modal-body').append(text);
+    $('#invitation-response').modal('show');
+
+    dataSync.executeSPARQLUpdateForUser(await core.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
     <${response.invitationUrl}> <${namespaces.schema}result> <${response.responseUrl}>}
   `);
-  dataSync.deleteFileForUser(fileurl);
+    dataSync.deleteFileForUser(fileurl);
+  } else {
+    console.log(`No game url was found for response ${response.value}.`);
+  }
 }
 
 $('#clear-inbox-btn').click(async () => {

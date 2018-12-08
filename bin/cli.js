@@ -10,8 +10,6 @@ const readline = require('readline');
 const DataSync = require('../lib/datasync');
 const https = require('https');
 const Q = require('q');
-const URI = require('uri-js');
-const {format} = require('date-fns');
 const Chess = require('chess.js').Chess;
 
 let userWebId;
@@ -107,13 +105,6 @@ function showGameMenu() {
     });
 }
 
-function getDefaultDataUrl(webId) {
-  const parsedWebId = URI.parse(webId);
-  const today = format(new Date(), 'yyyyMMdd');
-
-  return  `${parsedWebId.scheme}://${parsedWebId.host}/public/chess_${today}.ttl`;
-}
-
 async function showNewGameMenu() {
   const friends = {};
   const allFriends = await core.getAllObjectsFromPredicateForResource(userWebId, namespaces.foaf + 'knows');
@@ -155,7 +146,7 @@ function askForDataUrl(callback) {
         name: 'dataurl',
         type: 'input',
         message: 'Where do you want to store the game data?',
-        'default': getDefaultDataUrl(userWebId)
+        'default': core.getDefaultDataUrl(userWebId)
       }
     ])
     .then(async answers => {
