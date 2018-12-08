@@ -373,7 +373,7 @@ $('#continue-btn').click(async () => {
       $('#continue-games').removeClass('hidden');
 
       games.forEach(async game => {
-        let name = await data[game.gameUrl]['http://schema.org/name'];
+        let name = await core.getObjectFromPredicateForResource(game.gameUrl, namespaces.schema + 'name');
 
         if (!name) {
           name = game.gameUrl;
@@ -521,7 +521,7 @@ async function processResponseInNotification(response, fileurl) {
 
   if (gameUrl) {
     gameUrl = gameUrl.value;
-    let gameName = await data[gameUrl].schema_name;
+    let gameName = await core.getObjectFromPredicateForResource(gameUrl, namespaces.schema + 'name');
     const loader = new Loader(auth.fetch);
     const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
     const opponentsName = await core.getFormattedName(gameOppWebId);

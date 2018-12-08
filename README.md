@@ -6,7 +6,8 @@ All personal data about the game is stored on your POD.
 Requests to join and updates of a game are sent to the inbox of your opponent directly.
 
 The game is available in the [browser](#browser) and [terminal](#cli).
-Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screencast](https://streamable.com/tf8yv) of the Web app.
+Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screencast]() of the Web app, and
+the [screencast](https://streamable.com/x7fo0) of game in the terminal.
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
 
