@@ -35,7 +35,7 @@
     "chess.js": "jhlywa/chess.js#master",
     "date-fns": "^2.0.0-alpha.25",
     "inquirer": "^6.2.0",
-    "n3": "^1.0.0-beta.2",
+    "n3": "^1.0.2",
     "prefix-ns": "^0.1.2",
     "q": "^1.5.1",
     "semantic-chess": "0.1.0",

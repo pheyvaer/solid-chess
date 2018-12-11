@@ -6,6 +6,8 @@ const namespaces = require('../lib/namespaces');
 const { default: data } = require('@solid/query-ldflex');
 const Core = require('../lib/core');
 
+const WebRTC = require('../lib/webrtc');
+
 let userWebId;
 let semanticGame;
 let dataSync = new DataSync(auth.fetch);
@@ -230,6 +232,16 @@ auth.trackSession(async session => {
     checkForNotifications();
     // refresh every 5sec
     refreshIntervalId = setInterval(checkForNotifications, 5000);
+
+    let webRTC;
+
+    if (userWebId === 'https://ph_test.solid.community/profile/card#me') {
+      webRTC = new WebRTC(userWebId, 'https://ph2.solid.community/profile/card#me', auth.fetch, true);
+    } else {
+      webRTC = new WebRTC(userWebId, 'https://ph_test.solid.community/profile/card#me', auth.fetch, false);
+    }
+
+    webRTC.start();
   } else {
     $('#nav-login-btn').removeClass('hidden');
     $('#user-menu').addClass('hidden');
