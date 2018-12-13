@@ -19,6 +19,7 @@ let gameName;
 let refreshIntervalId;
 let selectedTheme = 'default';
 let core = new Core(auth.fetch);
+let webrtc = null;
 
 const fullColor = {
   'w': 'white',
@@ -110,7 +111,14 @@ async function setUpNewChessGame() {
   setUpForEveryGameOption();
 
   const startPosition = getNewGamePosition();
-  semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync);
+  const realTime = getRealTime();
+  semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync, realTime);
+
+  if (realTime) {
+    webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, true, rdfjsSource => {
+      core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource);
+    });
+  }
 
   setUpBoard(semanticGame);
   setUpAfterEveryGameOptionIsSetUp();
@@ -166,10 +174,15 @@ async function setUpBoard(semanticGame) {
     // illegal move
     if (move === null) return 'snapback';
 
-    const res = await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
+    await dataSync.executeSPARQLUpdateForUser(userDataUrl, move.sparqlUpdate);
 
     if (move.notification) {
-      dataSync.sendToOpponentsInbox(await core.getInboxUrl(oppWebId), move.notification);
+      if (semanticGame.isRealTime()) {
+        // TODO send notification over data channel
+        webrtc.sendData(move.notification);
+      } else {
+        dataSync.sendToOpponentsInbox(await core.getInboxUrl(oppWebId), move.notification);
+      }
     }
 
     updateStatus();
@@ -233,15 +246,15 @@ auth.trackSession(async session => {
     // refresh every 5sec
     refreshIntervalId = setInterval(checkForNotifications, 5000);
 
-    let webRTC;
-
-    if (userWebId === 'https://ph_test.solid.community/profile/card#me') {
-      webRTC = new WebRTC(userWebId, 'https://ph2.solid.community/profile/card#me', auth.fetch, true);
-    } else {
-      webRTC = new WebRTC(userWebId, 'https://ph_test.solid.community/profile/card#me', auth.fetch, false);
-    }
-
-    webRTC.start();
+    // let webRTC;
+    //
+    // if (userWebId === 'https://ph_test.solid.community/profile/card#me') {
+    //   webRTC = new WebRTC(userWebId, 'https://ph2.solid.community/profile/card#me', auth.fetch, true);
+    // } else {
+    //   webRTC = new WebRTC(userWebId, 'https://ph_test.solid.community/profile/card#me', auth.fetch, false);
+    // }
+    //
+    // webRTC.start();
   } else {
     $('#nav-login-btn').removeClass('hidden');
     $('#user-menu').addClass('hidden');
@@ -324,7 +337,7 @@ $('#join-btn').click(async () => {
           name = game.gameUrl;
         }
 
-        $select.append($(`<option value="${game.gameUrl}">${name} (${game.opponentsName})</option>`));
+        $select.append($(`<option value="${game.gameUrl}">${name} (${game.opponentsName}, ${game.realTime})</option>`));
       });
     } else {
       $('#no-join').removeClass('hidden');
@@ -357,6 +370,7 @@ $('#join-game-btn').click(async () => {
       setUpForEveryGameOption();
       oppWebId = game.opponentWebId;
       semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
+      // TODO set up WebRTC
       setUpBoard(semanticGame);
       setUpAfterEveryGameOptionIsSetUp();
     } else {
@@ -626,4 +640,8 @@ function getNewGamePosition() {
   } else {
     return null;
   }
+}
+
+function getRealTime() {
+  return $('#real-time-chk').prop('checked');
 }
