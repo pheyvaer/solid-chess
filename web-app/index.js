@@ -117,7 +117,11 @@ async function setUpNewChessGame() {
   if (realTime) {
     webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, true, rdfjsSource => {
       core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource);
+    }, () => {
+      $('#real-time-setup').modal('hide');
     });
+
+    $('#real-time-setup').modal('show');
   }
 
   setUpBoard(semanticGame);
@@ -370,7 +374,15 @@ $('#join-game-btn').click(async () => {
       setUpForEveryGameOption();
       oppWebId = game.opponentWebId;
       semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
-      // TODO set up WebRTC
+
+      if (semanticGame.isRealTime()) {
+        webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, false, rdfjsSource => {
+          core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource);
+        });
+
+        webrtc.start();
+      }
+
       setUpBoard(semanticGame);
       setUpAfterEveryGameOptionIsSetUp();
     } else {
@@ -547,40 +559,49 @@ async function processResponseInNotification(response, fileurl) {
 
   if (gameUrl) {
     gameUrl = gameUrl.value;
-    let gameName = await core.getObjectFromPredicateForResource(gameUrl, namespaces.schema + 'name');
-    const loader = new Loader(auth.fetch);
-    const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
-    const opponentsName = await core.getFormattedName(gameOppWebId);
 
-    //show response in UI
-    if (!gameName) {
-      gameName = gameUrl;
+    if (semanticGame && semanticGame.getUrl() === gameUrl && semanticGame.isRealTime()) {
+      if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
+        $('#real-time-setup .modal-body ul').append('<li>Invitation accepted</li><li>Setting up direct connection</li>');
+        webrtc.start();
+      }
     } else {
-      gameName = gameName.value;
-    }
+      let gameName = await core.getObjectFromPredicateForResource(gameUrl, namespaces.schema + 'name');
+      const loader = new Loader(auth.fetch);
+      const gameOppWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
+      const opponentsName = await core.getFormattedName(gameOppWebId);
 
-    let text;
+      //show response in UI
+      if (!gameName) {
+        gameName = gameUrl;
+      } else {
+        gameName = gameName.value;
+      }
 
-    if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
-      text = `${opponentsName} accepted your invitation to join "${gameName}"!`;
-    } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
-      text = `${opponentsName} refused your invitation to join ${gameName}...`;
-    }
+      let text;
 
-    if (!$('#invitation-response').is(':visible')) {
-      $('#invitation-response .modal-body').empty();
-    }
+      if (rsvpResponse.value === namespaces.schema + 'RsvpResponseYes') {
+        text = `${opponentsName} accepted your invitation to join "${gameName}"!`;
+      } else if (rsvpResponse.value === namespaces.schema + 'RsvpResponseNo') {
+        text = `${opponentsName} refused your invitation to join ${gameName}...`;
+      }
 
-    if ($('#invitation-response .modal-body').text() !== '') {
-      $('#invitation-response .modal-body').append('<br/>');
-    }
+      if (!$('#invitation-response').is(':visible')) {
+        $('#invitation-response .modal-body').empty();
+      }
 
-    $('#invitation-response .modal-body').append(text);
-    $('#invitation-response').modal('show');
+      if ($('#invitation-response .modal-body').text() !== '') {
+        $('#invitation-response .modal-body').append('<br/>');
+      }
 
-    dataSync.executeSPARQLUpdateForUser(await core.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
+      $('#invitation-response .modal-body').append(text);
+      $('#invitation-response').modal('show');
+
+      dataSync.executeSPARQLUpdateForUser(await core.getStorageForGame(userWebId, gameUrl), `INSERT DATA {
     <${response.invitationUrl}> <${namespaces.schema}result> <${response.responseUrl}>}
   `);
+    }
+
     dataSync.deleteFileForUser(fileurl);
   } else {
     console.log(`No game url was found for response ${response.value}.`);
