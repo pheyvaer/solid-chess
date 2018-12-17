@@ -116,7 +116,11 @@ async function setUpNewChessGame() {
 
   if (realTime) {
     webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, true, rdfjsSource => {
-      core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource);
+      core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
+        semanticGame.loadMove(san, {url});
+        board.position(semanticGame.getChess().fen());
+        updateStatus();
+      });
     }, () => {
       $('#real-time-setup').modal('hide');
     });
@@ -377,7 +381,11 @@ $('#join-game-btn').click(async () => {
 
       if (semanticGame.isRealTime()) {
         webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, false, rdfjsSource => {
-          core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource);
+          core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
+            semanticGame.loadMove(san, {url});
+            board.position(semanticGame.getChess().fen());
+            updateStatus();
+          });
         });
 
         webrtc.start();
