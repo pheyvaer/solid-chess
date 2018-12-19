@@ -143,7 +143,7 @@
           <p class="text-justify">
             Do you want to play the game in your <b>browser</b>? Great!
             Just log in (top right) and start playing.
-            Do you want to play the game in your <b>terminal</b>? Of course, we doesn't!
+            Do you want to play the game in your <b>terminal</b>? Of course, who doesn't!
             Install the game via <code>npm i solid-chess -g</code> and launch the game via <code>solid-chess</code>.
           </p>
 
@@ -253,9 +253,6 @@
             <div class="modal-body">
               <ul></ul>
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
           </div>
         </div>
       </div>
@@ -270,11 +267,27 @@
               </button>
             </div>
             <div class="modal-body">
-              Do you really want to quit this real time game? If you quit, you will forfeit the game and you cannot continue at a later time.
+              Do you really want to quit this real time game? If you quit you cannot continue at a later time.
             </div>
             <div class="modal-footer">
               <button id="yes-quit-real-time-btn" type="button" class="btn btn-dark">Yes</button>
               <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="real-time-opponent-quit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel6" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel6">Opponent has quit</h5>
+            </div>
+            <div class="modal-body">
+              Your opponent has quit the game.
+            </div>
+            <div class="modal-footer">
+              <button id="opp-quit-ok-btn" type="button" class="btn btn-dark">ok</button>
             </div>
           </div>
         </div>

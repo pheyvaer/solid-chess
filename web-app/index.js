@@ -115,12 +115,21 @@ async function setUpNewChessGame() {
   semanticGame = await core.setUpNewGame(userDataUrl, userWebId, oppWebId, startPosition, gameName, dataSync, realTime);
 
   if (realTime) {
+    let newMoveFound = false;
     webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, true, rdfjsSource => {
       core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
         semanticGame.loadMove(san, {url});
         board.position(semanticGame.getChess().fen());
         updateStatus();
+        newMoveFound = true;
       });
+
+      if (!newMoveFound) {
+        core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
+          semanticGame.loadGiveUpBy(agentUrl);
+          $('#real-time-opponent-quit').modal('show');
+        });
+      }
     }, () => {
       $('#real-time-setup').modal('hide');
     });
@@ -648,12 +657,14 @@ $('#stop-playing').click(() => {
   }
 });
 
-$('#yes-quit-real-time-btn').click(() => {
+$('#yes-quit-real-time-btn').click(async () => {
   $('#real-time-quit').modal('hide');
-  stopPlaying();
 
-  // todo: write RDF that the game has been forfeited by the player, unless the game is over
-  // todo: send notification to opponent
+  const result = semanticGame.giveUpBy(userWebId);
+
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { ${result.sparqlUpdate} }`);
+  webrtc.sendData(result.notification);
+  stopPlaying();
 });
 
 $('#custom-position-chk').change(() => {
@@ -674,6 +685,12 @@ $('.btn-cancel').click(() => {
   $('#continue-game-options').addClass('hidden');
   $('#game-options').removeClass('hidden');
   $('#how-it-works').removeClass('hidden');
+});
+
+$('#opp-quit-ok-btn').click(() => {
+  $('#real-time-opponent-quit').modal('hide');
+
+  stopPlaying();
 });
 
 /**

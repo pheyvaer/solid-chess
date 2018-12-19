@@ -15,7 +15,7 @@ a {
   padding-bottom: 20px;
 }
 
-#login-required, #theme-selector, #write-permission, #invitation-response, #real-time-setup, #real-time-quit {
+#login-required, #theme-selector, #write-permission, #invitation-response, #real-time-setup, #real-time-quit, #real-time-opponent-quit {
   color: black;
 }
 
