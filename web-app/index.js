@@ -125,6 +125,7 @@ async function setUpNewChessGame() {
       $('#real-time-setup').modal('hide');
     });
 
+    $('#real-time-setup .modal-body ul').append('<li>Invitation sent</li>');
     $('#real-time-setup').modal('show');
   }
 
@@ -386,9 +387,14 @@ $('#join-game-btn').click(async () => {
             board.position(semanticGame.getChess().fen());
             updateStatus();
           });
+        }, () => {
+          $('#real-time-setup').modal('hide');
         });
 
         webrtc.start();
+
+        $('#real-time-setup .modal-body ul').append('<li>Response sent</li><li>Setting up direct connection</li>');
+        $('#real-time-setup').modal('show');
       }
 
       setUpBoard(semanticGame);
