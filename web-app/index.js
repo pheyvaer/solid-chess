@@ -632,17 +632,28 @@ $('#clear-inbox-btn').click(async () => {
   });
 });
 
-$('#stop-playing').click(() => {
+function stopPlaying() {
   $('#game').addClass('hidden');
   $('#game-options').removeClass('hidden');
   $('#how-it-works').removeClass('hidden');
   semanticGame = null;
   board = null;
+}
 
-  // if (refreshIntervalId) {
-  //   clearInterval(refreshIntervalId);
-  //   refreshIntervalId = null;
-  // }
+$('#stop-playing').click(() => {
+  if (semanticGame.isRealTime()) {
+    $('#real-time-quit').modal('show');
+  } else {
+    stopPlaying();
+  }
+});
+
+$('#yes-quit-real-time-btn').click(() => {
+  $('#real-time-quit').modal('hide');
+  stopPlaying();
+
+  // todo: write RDF that the game has been forfeited by the player, unless the game is over
+  // todo: send notification to opponent
 });
 
 $('#custom-position-chk').change(() => {
