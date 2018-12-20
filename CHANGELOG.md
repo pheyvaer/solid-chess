@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-### [0.2.0] - 2018-12-xx
+## [0.2.0] - 2018-12-xx
 
 ### Added 
 
@@ -16,13 +16,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Typo on index page
 
-### [0.1.1] - 2018-12-08
+## [0.1.1] - 2018-12-08
 
 ### Added
 
 - add `core.js` and `datasync.js` to root `index.js`
 
-### [0.1.0] - 2018-12-08
+## [0.1.0] - 2018-12-08
 
 ### Added
 
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - `utils.js` replaced by `core.js`
 
-### [0.0.7] - 2018-11-24
+## [0.0.7] - 2018-11-24
 
 ### Added
 
@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - fix capitalization in some methods in `index.js`
 
-### [0.0.6] - 2018-11-12
+## [0.0.6] - 2018-11-12
 
 ### Added
 
@@ -68,7 +68,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - generating new game url failed when file did not exist
 
-### [0.0.5] - 2018-11-12
+## [0.0.5] - 2018-11-12
 
 ### Fixed
 
