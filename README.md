@@ -50,7 +50,8 @@ The result can be found in `web-app/dist/main.js`.
 
 ## Credits
 
-[Freevector Chess Pieces Set](https://www.freevector.com/chess-pieces-set) ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), no changes were made)
+- [Freevector Chess Pieces Set](https://www.freevector.com/chess-pieces-set) ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), no changes were made)
+- [Font Awesome chess-rook icon](https://fontawesome.com/icons/chess-rook) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), no changes were made)
 
 ## License
 © 2018 [Pieter Heyvaert](https://pieterheyvaert.com), [MIT License](https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md)
