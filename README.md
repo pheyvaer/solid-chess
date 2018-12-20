@@ -3,11 +3,18 @@
 This is a decentralized Chess game, build on top of [Solid](https://solid.inrupt.com/).
 No central sever is required to run or set up a game.
 All personal data about the game is stored on your POD.
-Requests to join and updates of a game are sent to the inbox of your opponent directly.
+Requests to join a game are sent to the inbox of your opponent directly.
+You have two types of games: a non-real-time and a real-time game.
+With a non-real-time game all updates are sent to the inbox of your opponent,
+who can interact with it when (s)he wants.
+With a real-time game [WebRTC](https://webrtc.org) is used to allow for a direct communication between two instances of the Web app.
 
 The game is available in the [browser](#browser) and [terminal](#cli).
-Check the [live version](https://pheyvaer.github.io/solid-chess/) or the [screencast](https://streamable.com/u5c4q) of the Web app, and
-the [screencast](https://streamable.com/x7fo0) of game in the terminal.
+Check the [live version](https://pheyvaer.github.io/solid-chess/) or one of the following screencasts:
+
+- [non-real-time game via Web app](https://streamable.com/u5c4q)
+- [real-time game via Web app]()
+- [non-real-time game via CLI](https://streamable.com/x7fo0)
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
 
@@ -18,8 +25,8 @@ WARNING: The "Clear inbox" button **removes all files with (chess) game data** i
 
 ## What you can do
 - Create a new game, which will send a request to join to your opponent.
-- Join a game
-- Continue a game you started earlier
+- Join a game, which will send a response back to your opponent.
+- Continue a game you started earlier.
 
 ## Used technologies/concepts/libraries
 - [Linked Data](https://en.wikipedia.org/wiki/Linked_data): to represent/share the details of the games
