@@ -13,7 +13,7 @@ The game is available in the [browser](#browser) and [terminal](#cli).
 Check the [live version](https://pheyvaer.github.io/solid-chess/) or one of the following screencasts:
 
 - [non-real-time game via Web app](https://streamable.com/u5c4q)
-- [real-time game via Web app]()
+- [real-time game via Web app](https://streamable.com/j951d)
 - [non-real-time game via CLI](https://streamable.com/x7fo0)
 
 WARNING: The "Clear inbox" button **removes all files with (chess) game data** in your inbox! So be careful!
