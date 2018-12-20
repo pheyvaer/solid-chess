@@ -116,7 +116,7 @@ async function setUpNewChessGame() {
 
   if (realTime) {
     let newMoveFound = false;
-    webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, true, rdfjsSource => {
+    webrtc = new WebRTC(userWebId, await core.getInboxUrl(userWebId), oppWebId, await core.getInboxUrl(oppWebId), auth.fetch, true, rdfjsSource => {
       core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
         semanticGame.loadMove(san, {url});
         board.position(semanticGame.getChess().fen());
@@ -355,7 +355,7 @@ $('#join-btn').click(async () => {
           name = game.gameUrl;
         }
 
-        $select.append($(`<option value="${game.gameUrl}">${name} (${game.opponentsName}, ${game.realTime})</option>`));
+        $select.append($(`<option value="${game.gameUrl}">${name} (${game.realTime ? `real time, ` : ''}${game.opponentsName})</option>`));
       });
     } else {
       $('#no-join').removeClass('hidden');
@@ -390,12 +390,22 @@ $('#join-game-btn').click(async () => {
       semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
 
       if (semanticGame.isRealTime()) {
-        webrtc = new WebRTC(userWebId, oppWebId, auth.fetch, false, rdfjsSource => {
+        webrtc = new WebRTC(userWebId, await core.getInboxUrl(userWebId), oppWebId, await core.getInboxUrl(oppWebId), auth.fetch, false, rdfjsSource => {
+          let newMoveFound = false;
+
           core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
             semanticGame.loadMove(san, {url});
             board.position(semanticGame.getChess().fen());
             updateStatus();
+            newMoveFound = true;
           });
+
+          if (!newMoveFound) {
+            core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
+              semanticGame.loadGiveUpBy(agentUrl);
+              $('#real-time-opponent-quit').modal('show');
+            });
+          }
         }, () => {
           $('#real-time-setup').modal('hide');
         });
@@ -647,6 +657,13 @@ function stopPlaying() {
   $('#how-it-works').removeClass('hidden');
   semanticGame = null;
   board = null;
+
+  if (webrtc) {
+    setTimeout(() => {
+      webrtc.stop();
+      webrtc = null;
+    }, 1000);
+  }
 }
 
 $('#stop-playing').click(() => {
