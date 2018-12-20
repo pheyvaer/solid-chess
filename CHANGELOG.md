@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2018-12-xx
+## [0.2.0] - 2018-12-20
 
 ### Added 
 
-- Initial support for real time games using WebRTC (only in the browser)
+- Initial support for real-time games using WebRTC (only in the browser)
+- Screencast of real-time game
 - Credits for Font Awesome icon that is used for background
 
 ### Fixed
