@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="DataSync.html">DataSync</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#createEmptyFileForUser">createEmptyFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#deleteFileForUser">deleteFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#executeSPARQLUpdateForUser">executeSPARQLUpdateForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#sendToOpponentsInbox">sendToOpponentsInbox</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#namespaces">namespaces</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="DataSync.html">DataSync</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#createEmptyFileForUser">createEmptyFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#deleteFileForUser">deleteFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#executeSPARQLUpdateForUser">executeSPARQLUpdateForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#sendToOpponentsInbox">sendToOpponentsInbox</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#fromUrl">fromUrl</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#namespaces">namespaces</a></span></li>
 </nav>
 
 <div id="main">
@@ -48,6 +48,7 @@ const {SemanticChess, Loader} = require('semantic-chess');
 const winston = require('winston');
 const URI = require('uri-js');
 const {format} = require('date-fns');
+const rdfjsSourceFromUrl = require('./rdfjssourcefactory').fromUrl;
 
 class SolidChessCore {
 
@@ -85,29 +86,45 @@ class SolidChessCore {
    */
   async getGamesToContinue(webid) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(webid);
-    const engine = newEngine();
-    const gameUrls = [];
+    const rdfjsSource = await rdfjsSourceFromUrl(webid, this.fetch);
 
-    engine.query(`SELECT ?game ?url {
+    if (rdfjsSource) {
+      const engine = newEngine();
+      const gameUrls = [];
+      const promises = [];
+
+      engine.query(`SELECT ?game ?url {
      ?game &lt;${namespaces.schema}contributor> &lt;${webid}>;
         &lt;${namespaces.storage}storeIn> ?url.
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', async function (data) {
-          data = data.toObject();
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(result => {
+          result.bindingsStream.on('data', async (data) => {
+            const deferred = Q.defer();
+            promises.push(deferred.promise);
+            data = data.toObject();
 
-          gameUrls.push({
-            gameUrl: data['?game'].value,
-            storeUrl: data['?url'].value
+            const realTime = await this.getObjectFromPredicateForResource(data['?game'].value, namespaces.chess + 'isRealTime');
+
+            if (!realTime || realTime.value !== 'true') {
+              gameUrls.push({
+                gameUrl: data['?game'].value,
+                storeUrl: data['?url'].value,
+              });
+            }
+
+            deferred.resolve();
+          });
+
+          result.bindingsStream.on('end', function () {
+            Q.all(promises).then(() => {
+              deferred.resolve(gameUrls);
+            });
           });
         });
-
-        result.bindingsStream.on('end', function () {
-          deferred.resolve(gameUrls);
-        });
-      });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
@@ -120,7 +137,7 @@ class SolidChessCore {
    */
   async getStorageForGame(fileurl, gameUrl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
     const engine = newEngine();
 
     engine.query(`SELECT ?url {
@@ -152,9 +169,13 @@ class SolidChessCore {
    * where move is the url of the next move and endsGame is true when this move is last move of the game.
    * If no move is found, move is null.
    */
-  async getNextHalfMove(fileurl, move, gameUrl) {
+  async getNextHalfMoveFromUrl(fileurl, move, gameUrl) {
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
+    return this.getNextHalfMoveFromRDFJSSource(rdfjsSource, move, gameUrl);
+  }
+
+  async getNextHalfMoveFromRDFJSSource(rdfjsSource, move, gameUrl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
     const engine = newEngine();
     let moveFound = false;
 
@@ -186,6 +207,29 @@ class SolidChessCore {
     return deferred.promise;
   }
 
+  async getGiveUpActionFromRDFJSSource(rdfjsSource) {
+    const deferred = Q.defer();
+    const engine = newEngine();
+
+    engine.query(`SELECT ?action {
+    ?action a &lt;${namespaces.schema}GiveUpAction>.
+  }`,
+      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+      .then(function (result) {
+        result.bindingsStream.on('data', function (data) {
+          data = data.toObject();
+
+          deferred.resolve(data['?action'].value);
+        });
+
+        result.bindingsStream.on('end', function () {
+          deferred.resolve(null);
+        });
+      });
+
+    return deferred.promise;
+  }
+
   /**
    * This method returns the original move in a file, i.e., the move preceding a next half move or the first move of a game.
    * @param fileurl: the url of the file in which to look.
@@ -193,29 +237,34 @@ class SolidChessCore {
    */
   async getOriginalHalfMove(fileurl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
-    const engine = newEngine();
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
 
-    engine.query(`SELECT ?move {
+    if (rdfjsSource) {
+      const engine = newEngine();
+
+      engine.query(`SELECT ?move {
     OPTIONAL {?move &lt;${namespaces.chess}nextHalfMove> ?nextMove.}
     OPTIONAL {?game &lt;${namespaces.chess}hasFirstHalfMove> ?move.}
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', function (data) {
-          data = data.toObject();
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(function (result) {
+          result.bindingsStream.on('data', function (data) {
+            data = data.toObject();
 
-          if (data['?move']) {
-            deferred.resolve(data['?move'].value);
-          } else {
+            if (data['?move']) {
+              deferred.resolve(data['?move'].value);
+            } else {
+              deferred.resolve(null);
+            }
+          });
+
+          result.bindingsStream.on('end', function () {
             deferred.resolve(null);
-          }
+          });
         });
-
-        result.bindingsStream.on('end', function () {
-          deferred.resolve(null);
-        });
-      });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
@@ -228,7 +277,39 @@ class SolidChessCore {
    */
   async getFirstHalfMove(fileurl, gameUrl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
+    const engine = newEngine();
+    let moveFound = false;
+
+    engine.query(`SELECT ?nextMove {
+    &lt;${gameUrl}> &lt;${namespaces.chess}hasFirstHalfMove> ?nextMove.
+  }`,
+      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+      .then(function (result) {
+        result.bindingsStream.on('data', function (data) {
+          data = data.toObject();
+          moveFound = true;
+
+          deferred.resolve(data['?nextMove'].value);
+        });
+
+        result.bindingsStream.on('end', function () {
+          if (!moveFound) {
+            deferred.resolve(null);
+          }
+        });
+      });
+
+    return deferred.promise;
+  }
+
+  async getFirstHalfMoveFromUrl(fileurl, gameUrl) {
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
+    return this.getFirstHalfMoveFromRDFJSSource(rdfjsSource, gameUrl);
+  }
+
+  async getFirstHalfMoveFromRDFJSSource(rdfjsSource, gameUrl) {
+    const deferred = Q.defer();
     const engine = newEngine();
     let moveFound = false;
 
@@ -265,108 +346,75 @@ class SolidChessCore {
    */
   async getJoinRequest(fileurl, userWebId) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
-    const engine = newEngine();
-    let invitationFound = false;
-    const self = this;
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
 
-    engine.query(`SELECT ?invitation {
+    if (rdfjsSource) {
+      const engine = newEngine();
+      let invitationFound = false;
+      const self = this;
+
+      engine.query(`SELECT ?invitation {
     ?invitation a &lt;${namespaces.schema}InviteAction>.
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', async function (result) {
-          invitationFound = true;
-          result = result.toObject();
-          const invitationUrl = result['?invitation'].value;
-          let gameUrl = await self.getObjectFromPredicateForResource(invitationUrl, namespaces.schema + 'event');
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(function (result) {
+          result.bindingsStream.on('data', async function (result) {
+            invitationFound = true;
+            result = result.toObject();
+            const invitationUrl = result['?invitation'].value;
+            let gameUrl = await self.getObjectFromPredicateForResource(invitationUrl, namespaces.schema + 'event');
 
-          if (!gameUrl) {
-            gameUrl = await self.getGameFromInvitation(invitationUrl);
+            if (!gameUrl) {
+              gameUrl = await self.getGameFromInvitation(invitationUrl);
 
-            if (gameUrl) {
-              self.logger.info('game: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
-            }
-          }
-
-          if (!gameUrl) {
-            deferred.resolve(null);
-          } else {
-            gameUrl = gameUrl.value;
-
-            const types = await self.getAllObjectsFromPredicateForResource(gameUrl, namespaces.rdf + 'type');
-
-            let i = 0;
-
-            while (i &lt; types.length &amp;&amp; types[i].value !== namespaces.chess + 'ChessGame') {
-              i++
+              if (gameUrl) {
+                self.logger.info('game: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
+              }
             }
 
-            if (i === types.length) {
+            if (!gameUrl) {
               deferred.resolve(null);
-            }
-
-            const recipient = await self.getObjectFromPredicateForResource(invitationUrl, namespaces.schema + 'recipient');
-
-            if (!recipient || recipient.value !== userWebId) {
-              deferred.resolve(null);
-            }
-
-            const loader = new Loader(self.fetch);
-            const opponentWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
-
-            deferred.resolve({
-              opponentWebId,
-              gameUrl,
-              invitationUrl
-            });
-          }
-        });
-
-        result.bindingsStream.on('end', function () {
-          if (!invitationFound) {
-            deferred.resolve(null);
-          }
-        });
-      });
-
-    return deferred.promise;
-  }
-
-  /**
-   * This method returns an RDFJSSource of an url
-   * @param {string} url: url of the source
-   * @returns {Promise}: a promise that resolve with the corresponding RDFJSSource
-   */
-  getRDFjsSourceFromUrl(url) {
-    const deferred = Q.defer();
-
-    this.fetch(url)
-      .then(async res => {
-        if (res.status === 404) {
-          deferred.reject(404);
-        } else {
-          const body = await res.text();
-          const store = N3.Store();
-          const parser = N3.Parser({baseIRI: res.url});
-
-          parser.parse(body, (err, quad, prefixes) => {
-            if (err) {
-              deferred.reject();
-            } else if (quad) {
-              store.addQuad(quad);
             } else {
-              const source = {
-                match: function (s, p, o, g) {
-                  return require('streamify-array')(store.getQuads(s, p, o, g));
-                }
-              };
+              gameUrl = gameUrl.value;
 
-              deferred.resolve(source);
+              const types = await self.getAllObjectsFromPredicateForResource(gameUrl, namespaces.rdf + 'type');
+
+              let i = 0;
+
+              while (i &lt; types.length &amp;&amp; types[i].value !== namespaces.chess + 'ChessGame') {
+                i++
+              }
+
+              if (i === types.length) {
+                deferred.resolve(null);
+              }
+
+              const recipient = await self.getObjectFromPredicateForResource(invitationUrl, namespaces.schema + 'recipient');
+
+              if (!recipient || recipient.value !== userWebId) {
+                deferred.resolve(null);
+              }
+
+              const loader = new Loader(self.fetch);
+              const opponentWebId = await loader.findWebIdOfOpponent(gameUrl, userWebId);
+
+              deferred.resolve({
+                opponentWebId,
+                gameUrl,
+                invitationUrl
+              });
             }
           });
-        }
-      });
+
+          result.bindingsStream.on('end', function () {
+            if (!invitationFound) {
+              deferred.resolve(null);
+            }
+          });
+        });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
@@ -378,7 +426,7 @@ class SolidChessCore {
    */
   async fileContainsChessInfo(fileUrl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileUrl);
+    const rdfjsSource = await rdfjsSourceFromUrl(fileUrl, this.fetch);
     const engine = newEngine();
 
     engine.query(`SELECT * {
@@ -606,7 +654,7 @@ class SolidChessCore {
    */
   async getSANRecord(moveUrl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(moveUrl);
+    const rdfjsSource = await rdfjsSourceFromUrl(moveUrl, this.fetch);
     const engine = newEngine();
 
     engine.query(`SELECT ?san {
@@ -637,27 +685,32 @@ class SolidChessCore {
    */
   async getResponseToInvitation(fileurl) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(fileurl);
-    const engine = newEngine();
+    const rdfjsSource = await rdfjsSourceFromUrl(fileurl, this.fetch);
 
-    engine.query(`SELECT * {
+    if (rdfjsSource) {
+      const engine = newEngine();
+
+      engine.query(`SELECT * {
     ?invitation &lt;${namespaces.schema}result> ?response.
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', function (data) {
-          data = data.toObject();
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(function (result) {
+          result.bindingsStream.on('data', function (data) {
+            data = data.toObject();
 
-          deferred.resolve({
-            invitationUrl: data['?invitation'].value,
-            responseUrl: data['?response'].value,
+            deferred.resolve({
+              invitationUrl: data['?invitation'].value,
+              responseUrl: data['?response'].value,
+            });
+          });
+
+          result.bindingsStream.on('end', function () {
+            deferred.resolve(null);
           });
         });
-
-        result.bindingsStream.on('end', function () {
-          deferred.resolve(null);
-        });
-      });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
@@ -688,49 +741,59 @@ class SolidChessCore {
    */
   async getObjectFromPredicateForResource(url, predicate) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(url);
-    const engine = newEngine();
+    const rdfjsSource = await rdfjsSourceFromUrl(url, this.fetch);
 
-    engine.query(`SELECT ?o {
+    if (rdfjsSource) {
+      const engine = newEngine();
+
+      engine.query(`SELECT ?o {
     &lt;${url}> &lt;${predicate}> ?o.
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', function (data) {
-          data = data.toObject();
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(function (result) {
+          result.bindingsStream.on('data', function (data) {
+            data = data.toObject();
 
-          deferred.resolve(data['?o']);
-        });
+            deferred.resolve(data['?o']);
+          });
 
-        result.bindingsStream.on('end', function () {
-          deferred.resolve(null);
+          result.bindingsStream.on('end', function () {
+            deferred.resolve(null);
+          });
         });
-      });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
 
   async getAllObjectsFromPredicateForResource(url, predicate) {
     const deferred = Q.defer();
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(url);
-    const engine = newEngine();
-    const objects = [];
+    const rdfjsSource = await rdfjsSourceFromUrl(url, this.fetch);
 
-    engine.query(`SELECT ?o {
+    if (rdfjsSource) {
+      const engine = newEngine();
+      const objects = [];
+
+      engine.query(`SELECT ?o {
     &lt;${url}> &lt;${predicate}> ?o.
   }`,
-      {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
-      .then(function (result) {
-        result.bindingsStream.on('data', function (data) {
-          data = data.toObject();
+        {sources: [{type: 'rdfjsSource', value: rdfjsSource}]})
+        .then(function (result) {
+          result.bindingsStream.on('data', function (data) {
+            data = data.toObject();
 
-          objects.push(data['?o']);
-        });
+            objects.push(data['?o']);
+          });
 
-        result.bindingsStream.on('end', function () {
-          deferred.resolve(objects);
+          result.bindingsStream.on('end', function () {
+            deferred.resolve(objects);
+          });
         });
-      });
+    } else {
+      deferred.resolve(null);
+    }
 
     return deferred.promise;
   }
@@ -778,19 +841,19 @@ class SolidChessCore {
           gameStorageUrl = userDataUrl;
         }
 
-        if (game &amp;&amp; game.isOpponentsTurn()) {
+        if (game &amp;&amp; game.isOpponentsTurn() &amp;&amp; !game.isRealTime()) {
           const lastMoveUrl = game.getLastMove();
           let nextMoveUrl;
           let endsGame = false;
 
           if (lastMoveUrl) {
             const r = await
-              this.getNextHalfMove(fileurl, lastMoveUrl.url, game.getUrl());
+              this.getNextHalfMoveFromUrl(fileurl, lastMoveUrl.url, game.getUrl());
             nextMoveUrl = r.move;
             endsGame = r.endsGame;
           } else {
             nextMoveUrl = await
-              this.getFirstHalfMove(fileurl, game.getUrl());
+              this.getFirstHalfMoveFromUrl(fileurl, game.getUrl());
           }
 
           if (nextMoveUrl) {
@@ -841,6 +904,74 @@ class SolidChessCore {
     }
   }
 
+  async checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, callback) {
+    let actionUrl = await this.getGiveUpActionFromRDFJSSource(rdfjsSource);
+
+    if (actionUrl) {
+      let objectUrl = await this.getObjectFromPredicateForResource(actionUrl, namespaces.schema + 'object');
+
+      if (objectUrl &amp;&amp; semanticGame.getUrl() === objectUrl.value) {
+        let agentUrl = await this.getObjectFromPredicateForResource(actionUrl, namespaces.schema + 'agent');
+
+        if (agentUrl) {
+          callback(agentUrl.value, objectUrl.value);
+        }
+      }
+    }
+  }
+
+  async checkForNewMoveForRealTimeGame(semanticGame, dataSync, gameStorageUrl, rdfsjsSource, callback) {
+    const lastMoveUrl = semanticGame.getLastMove();
+    let nextMoveUrl;
+    let endsGame = false;
+
+    if (lastMoveUrl) {
+      const r = await this.getNextHalfMoveFromRDFJSSource(rdfsjsSource, lastMoveUrl.url, semanticGame.getUrl());
+      nextMoveUrl = r.move;
+      endsGame = r.endsGame;
+    } else {
+      nextMoveUrl = await this.getFirstHalfMoveFromRDFJSSource(rdfsjsSource, semanticGame.getUrl());
+    }
+
+    if (nextMoveUrl) {
+      this.logger.debug(nextMoveUrl);
+
+      if (lastMoveUrl) {
+        let update = `INSERT DATA {
+              &lt;${lastMoveUrl.url}> &lt;${namespaces.chess}nextHalfMove> &lt;${nextMoveUrl}>.
+            `;
+
+        if (endsGame) {
+          update += `&lt;${semanticGame.getUrl()}> &lt;${namespaces.chess}hasLastHalfMove> &lt;${nextMoveUrl}>.`;
+        }
+
+        update += '}';
+
+        dataSync.executeSPARQLUpdateForUser(gameStorageUrl, update);
+      } else {
+        dataSync.executeSPARQLUpdateForUser(gameStorageUrl, `INSERT DATA {
+              &lt;${semanticGame.getUrl()}> &lt;${namespaces.chess}hasFirstHalfMove> &lt;${nextMoveUrl}>.
+            }`);
+      }
+
+      let san = await this.getObjectFromPredicateForResource(nextMoveUrl, namespaces.chess + 'hasSANRecord');
+
+      if (!san) {
+        san = await this.getSANRecord(nextMoveUrl);
+
+        if (san) {
+          console.error('san: found by using Comunica directly, but not when using LDflex. Caching issue (reported).');
+        }
+      }
+
+      if (san) {
+        callback(san.value, nextMoveUrl);
+      } else {
+        console.error(`The move with url "${nextMoveUrl}" does not have a SAN record defined.`);
+      }
+    }
+  }
+
   /**
    * This method sets up a new game.
    * @param userDataUrl: the url of the file where the data is stored
@@ -849,9 +980,10 @@ class SolidChessCore {
    * @param startPosition: the FEN of the start position of the chess board
    * @param name: the name of the game
    * @param dataSync: the DataSync instance used to write data
+   * @param realTime: is true when the game is played in real time
    * @returns {SemanticChess}: the newly created chess game
    */
-  async setUpNewGame(userDataUrl, userWebId, opponentWebId, startPosition, name, dataSync) {
+  async setUpNewGame(userDataUrl, userWebId, opponentWebId, startPosition, name, dataSync, realTime = false) {
     const gameUrl = await this.generateUniqueUrlForResource(userDataUrl);
     const semanticGame = new SemanticChess({
       url: gameUrl,
@@ -859,7 +991,8 @@ class SolidChessCore {
       userWebId,
       opponentWebId,
       name,
-      startPosition
+      startPosition,
+      realTime
     });
     const invitation = await this.generateInvitation(userDataUrl, semanticGame.getUrl(), userWebId, opponentWebId);
 
@@ -904,9 +1037,16 @@ class SolidChessCore {
   async processGameToJoin(game, fileurl) {
     game.fileUrl = fileurl;
     game.name = await this.getObjectFromPredicateForResource(game.gameUrl, namespaces.schema + 'name');
+    game.realTime = await this.getObjectFromPredicateForResource(game.gameUrl, namespaces.chess + 'isRealTime');
 
     if (game.name) {
       game.name = game.name.value;
+    }
+
+    if (game.realTime) {
+      game.realTime = game.realTime.value === 'true';
+    } else {
+      game.realTime = false;
     }
 
     game.opponentsName = await this.getFormattedName(game.opponentWebId);
@@ -951,7 +1091,7 @@ class SolidChessCore {
   async checkUserInboxForUpdates(inboxUrl) {
     const deferred = Q.defer();
     const newResources = [];
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(inboxUrl);
+    const rdfjsSource = await rdfjsSourceFromUrl(inboxUrl, this.fetch);
     const self = this;
     const engine = newEngine();
 
@@ -987,7 +1127,7 @@ class SolidChessCore {
   async getAllResourcesInInbox(inboxUrl) {
     const deferred = Q.defer();
     const resources = [];
-    const rdfjsSource = await this.getRDFjsSourceFromUrl(inboxUrl);
+    const rdfjsSource = await rdfjsSourceFromUrl(inboxUrl, this.fetch);
     const engine = newEngine();
 
     engine.query(`SELECT ?resource {
@@ -1031,7 +1171,7 @@ module.exports = SolidChessCore;
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sat Dec 08 2018 12:15:59 GMT+0100 (Central European Standard Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Dec 20 2018 10:45:14 GMT+0100 (Central European Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>

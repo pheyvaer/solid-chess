@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>namespaces.js - Documentation</title>
+    <title>rdfjssourcefactory.js - Documentation</title>
 
     <script src="scripts/prettify/prettify.js"></script>
     <script src="scripts/prettify/lang-css.js"></script>
@@ -29,7 +29,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">namespaces.js</h1>
+    <h1 class="page-title">rdfjssourcefactory.js</h1>
     
 
     
@@ -39,18 +39,78 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * author: Pieter Heyvaert (pheyvaer.heyvaert@ugent.be)
- * Ghent University - imec - IDLab
+            <pre class="prettyprint source linenums"><code>const N3 = require('n3');
+const Q = require('q');
+
+/**
+ * This method returns an RDFJSSource of an url
+ * @param {string} url: url of the source
+ * @returns {Promise}: a promise that resolve with the corresponding RDFJSSource
  */
+function fromUrl(url, fetch) {
+  const deferred = Q.defer();
 
-const namespaces = require('prefix-ns').asMap();
-namespaces.chess = 'http://purl.org/NET/rdfchess/ontology/';
-namespaces.game = 'http://example.org/game/';
-namespaces.storage = 'http://example.org/storage/';
+  fetch(url)
+    .then(async res => {
+      if (res.status === 404) {
+        deferred.reject(404);
+      } else {
+        const body = await res.text();
+        const store = N3.Store();
+        const parser = N3.Parser({baseIRI: res.url});
 
-module.exports = namespaces;
-</code></pre>
+        parser.parse(body, (err, quad, prefixes) => {
+          if (err) {
+            deferred.reject();
+          } else if (quad) {
+            store.addQuad(quad);
+          } else {
+            const source = {
+              match: function (s, p, o, g) {
+                return require('streamify-array')(store.getQuads(s, p, o, g));
+              }
+            };
+
+            deferred.resolve(source);
+          }
+        });
+      }
+    }).catch(reason => {
+    console.warn(`No RDFJSSource was created for ${url}. File already deleted?`);
+    deferred.resolve(null);
+  });
+
+  return deferred.promise;
+}
+
+function fromString(str) {
+  const deferred = Q.defer();
+  const store = N3.Store();
+  const parser = N3.Parser();
+
+  parser.parse(str, (err, quad, prefixes) => {
+    if (err) {
+      deferred.reject();
+    } else if (quad) {
+      store.addQuad(quad);
+    } else {
+      const source = {
+        match: function (s, p, o, g) {
+          return require('streamify-array')(store.getQuads(s, p, o, g));
+        }
+      };
+
+      deferred.resolve(source);
+    }
+  });
+
+  return deferred.promise;
+}
+
+module.exports = {
+  fromUrl,
+  fromString
+};</code></pre>
         </article>
     </section>
 

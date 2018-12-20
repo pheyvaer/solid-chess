@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="DataSync.html">DataSync</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#createEmptyFileForUser">createEmptyFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#deleteFileForUser">deleteFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#executeSPARQLUpdateForUser">executeSPARQLUpdateForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#sendToOpponentsInbox">sendToOpponentsInbox</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#namespaces">namespaces</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="DataSync.html">DataSync</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#createEmptyFileForUser">createEmptyFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#deleteFileForUser">deleteFileForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#executeSPARQLUpdateForUser">executeSPARQLUpdateForUser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="DataSync.html#sendToOpponentsInbox">sendToOpponentsInbox</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#fromUrl">fromUrl</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#namespaces">namespaces</a></span></li>
 </nav>
 
 <div id="main">
@@ -53,7 +53,8 @@ No central sever is required to run or set up a game.
 All personal data about the game is stored on your POD.
 Requests to join and updates of a game are sent to the inbox of your opponent directly.</p>
 <p>The game is available in the <a href="#browser">browser</a> and <a href="#cli">terminal</a>.
-Check the <a href="https://pheyvaer.github.io/solid-chess/">live version</a> or the <a href="https://streamable.com/tf8yv">screencast</a> of the Web app.</p>
+Check the <a href="https://pheyvaer.github.io/solid-chess/">live version</a> or the <a href="https://streamable.com/u5c4q">screencast</a> of the Web app, and
+the <a href="https://streamable.com/x7fo0">screencast</a> of game in the terminal.</p>
 <p>WARNING: The &quot;Clear inbox&quot; button <strong>removes all files with (chess) game data</strong> in your inbox! So be careful!</p>
 <h2>Documentation</h2><ul>
 <li>Code documentation can be found <a href="https://pheyvaer.github.io/solid-chess/docs/">here</a>.</li>
@@ -80,14 +81,17 @@ Check the <a href="https://pheyvaer.github.io/solid-chess/">live version</a> or 
 <li>Clone this repo.</li>
 <li><code>npm i</code>: install Node.js dependencies.</li>
 <li><code>npm run build:web</code>: bundle the JavaScript via Webpack. 
-The result can be found in <code>dist/main.js</code>.</li>
-<li>Serve the contents of the folder, e.g., via <code>http-server</code>.</li>
+The result can be found in <code>web-app/dist/main.js</code>.</li>
+<li>Serve the contents of the root folder, e.g., via <code>http-server</code>.</li>
 </ul>
 <h3>CLI</h3><ul>
 <li><code>npm i solid-chess -g</code>: install the game.</li>
 <li><code>solid-chess</code>:launch the game.</li>
 </ul>
-<h2>Credits</h2><p><a href="https://www.freevector.com/chess-pieces-set">Freevector Chess Pieces Set</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, no changes were made)</p>
+<h2>Credits</h2><ul>
+<li><a href="https://www.freevector.com/chess-pieces-set">Freevector Chess Pieces Set</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, no changes were made)</li>
+<li><a href="https://fontawesome.com/icons/chess-rook">Font Awesome chess-rook icon</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, no changes were made)</li>
+</ul>
 <h2>License</h2><p>© 2018 <a href="https://pieterheyvaert.com">Pieter Heyvaert</a>, <a href="https://github.com/pheyvaer/solid-chess/blob/master/LICENSE.md">MIT License</a></p></article>
     </section>
 
@@ -101,7 +105,7 @@ The result can be found in <code>dist/main.js</code>.</li>
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sat Dec 08 2018 12:15:59 GMT+0100 (Central European Standard Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Dec 20 2018 10:45:14 GMT+0100 (Central European Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
