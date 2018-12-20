@@ -116,22 +116,36 @@ async function setUpNewChessGame() {
 
   if (realTime) {
     let newMoveFound = false;
-    webrtc = new WebRTC(userWebId, await core.getInboxUrl(userWebId), oppWebId, await core.getInboxUrl(oppWebId), auth.fetch, true, rdfjsSource => {
-      core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
-        semanticGame.loadMove(san, {url});
-        board.position(semanticGame.getChess().fen());
-        updateStatus();
-        newMoveFound = true;
-      });
-
-      if (!newMoveFound) {
-        core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
-          semanticGame.loadGiveUpBy(agentUrl);
-          $('#real-time-opponent-quit').modal('show');
+    webrtc = new WebRTC({
+      userWebId,
+      userInboxUrl: await core.getInboxUrl(userWebId),
+      opponentWebId: oppWebId,
+      opponentInboxUrl: await core.getInboxUrl(oppWebId),
+      fetch: auth.fetch,
+      initiator: true,
+      onNewData: rdfjsSource => {
+        core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
+          semanticGame.loadMove(san, {url});
+          board.position(semanticGame.getChess().fen());
+          updateStatus();
+          newMoveFound = true;
         });
+
+        if (!newMoveFound) {
+          core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
+            semanticGame.loadGiveUpBy(agentUrl);
+            $('#real-time-opponent-quit').modal('show');
+          });
+        }
+      },
+      onCompletion: () => {
+        $('#real-time-setup').modal('hide');
+      },
+      onClosed: (closedByUser) => {
+        if (!closedByUser && !$('#real-time-opponent-quit').is(':visible')) {
+          $('#real-time-opponent-quit').modal('show');
+        }
       }
-    }, () => {
-      $('#real-time-setup').modal('hide');
     });
 
     $('#real-time-setup .modal-body ul').append('<li>Invitation sent</li>');
@@ -263,16 +277,6 @@ auth.trackSession(async session => {
     checkForNotifications();
     // refresh every 5sec
     refreshIntervalId = setInterval(checkForNotifications, 5000);
-
-    // let webRTC;
-    //
-    // if (userWebId === 'https://ph_test.solid.community/profile/card#me') {
-    //   webRTC = new WebRTC(userWebId, 'https://ph2.solid.community/profile/card#me', auth.fetch, true);
-    // } else {
-    //   webRTC = new WebRTC(userWebId, 'https://ph_test.solid.community/profile/card#me', auth.fetch, false);
-    // }
-    //
-    // webRTC.start();
   } else {
     $('#nav-login-btn').removeClass('hidden');
     $('#user-menu').addClass('hidden');
@@ -390,24 +394,38 @@ $('#join-game-btn').click(async () => {
       semanticGame = await core.joinExistingChessGame(gameUrl, game.invitationUrl, oppWebId, userWebId, userDataUrl, dataSync, game.fileUrl);
 
       if (semanticGame.isRealTime()) {
-        webrtc = new WebRTC(userWebId, await core.getInboxUrl(userWebId), oppWebId, await core.getInboxUrl(oppWebId), auth.fetch, false, rdfjsSource => {
-          let newMoveFound = false;
+        webrtc = new WebRTC({
+          userWebId,
+          userInboxUrl: await core.getInboxUrl(userWebId),
+          opponentWebId: oppWebId,
+          opponentInboxUrl: await core.getInboxUrl(oppWebId),
+          fetch: auth.fetch,
+          initiator: false,
+          onNewData: rdfjsSource => {
+            let newMoveFound = false;
 
-          core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
-            semanticGame.loadMove(san, {url});
-            board.position(semanticGame.getChess().fen());
-            updateStatus();
-            newMoveFound = true;
-          });
-
-          if (!newMoveFound) {
-            core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
-              semanticGame.loadGiveUpBy(agentUrl);
-              $('#real-time-opponent-quit').modal('show');
+            core.checkForNewMoveForRealTimeGame(semanticGame, dataSync, userDataUrl, rdfjsSource, (san, url) => {
+              semanticGame.loadMove(san, {url});
+              board.position(semanticGame.getChess().fen());
+              updateStatus();
+              newMoveFound = true;
             });
+
+            if (!newMoveFound) {
+              core.checkForGiveUpOfRealTimeGame(semanticGame, rdfjsSource, (agentUrl, objectUrl) => {
+                semanticGame.loadGiveUpBy(agentUrl);
+                $('#real-time-opponent-quit').modal('show');
+              });
+            }
+          },
+          onCompletion: () => {
+            $('#real-time-setup').modal('hide');
+          },
+          onClosed: (closedByUser) => {
+            if (!closedByUser && !$('#real-time-opponent-quit').is(':visible')) {
+              $('#real-time-opponent-quit').modal('show');
+            }
           }
-        }, () => {
-          $('#real-time-setup').modal('hide');
         });
 
         webrtc.start();
@@ -666,6 +684,13 @@ function stopPlaying() {
   }
 }
 
+function giveUp() {
+  const result = semanticGame.giveUpBy(userWebId);
+
+  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { ${result.sparqlUpdate} }`);
+  webrtc.sendData(result.notification);
+}
+
 $('#stop-playing').click(() => {
   if (semanticGame.isRealTime()) {
     $('#real-time-quit').modal('show');
@@ -677,10 +702,7 @@ $('#stop-playing').click(() => {
 $('#yes-quit-real-time-btn').click(async () => {
   $('#real-time-quit').modal('hide');
 
-  const result = semanticGame.giveUpBy(userWebId);
-
-  dataSync.executeSPARQLUpdateForUser(userDataUrl, `INSERT DATA { ${result.sparqlUpdate} }`);
-  webrtc.sendData(result.notification);
+  giveUp();
   stopPlaying();
 });
 
@@ -725,3 +747,10 @@ function getNewGamePosition() {
 function getRealTime() {
   return $('#real-time-chk').prop('checked');
 }
+
+// todo: this is an attempt to cleanly exit the game, but this doesn't work at the moment
+window.onunload = window.onbeforeunload = () => {
+  if (semanticGame.isRealTime() && webrtc) {
+    giveUp();
+  }
+};
