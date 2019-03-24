@@ -1,6 +1,6 @@
 {
   "name": "solid-chess",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A Solid-based chess game",
   "main": "index.js",
   "scripts": {
