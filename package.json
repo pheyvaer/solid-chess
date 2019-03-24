@@ -39,7 +39,7 @@
     "prefix-ns": "^0.1.2",
     "q": "^1.5.1",
     "semantic-chess": "0.2.0",
-    "solid-auth-client": "^2.2.10",
+    "solid-auth-client": "^2.3.0",
     "streamify-array": "^1.0.1",
     "uniqid": "^5.0.3",
     "uri-js": "^4.2.2",
